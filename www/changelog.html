@@ -1,0 +1,493 @@
+<html>
+<body>
+<style>
+* { box-sizing: border-box; }
+a {
+  color: #33cc33;
+}
+#intro-panel {
+  background: black;
+  text-align: center;
+  position: fixed;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  transition: opacity 4s;
+  background: black;
+  z-index: 950;
+  /*
+  -webkit-perspective: 150px;
+		 -moz-perspective: 150px;
+			 -o-perspective: 150px;
+					perspective: 150px;
+  perspective-origin: 50% 0%;
+  */			
+}
+/*
+#intro-scroller {
+  width: 400px;
+  margin: auto;
+  border: 12px solid red;
+  -webkit-transform-style: preserve-3d;
+		 -moz-transform-style: preserve-3d;
+			 -o-transform-style: preserve-3d;
+					transform-style: preserve-3d;
+					
+  -webkit-transform: rotateX( 40deg );
+		 -moz-transform: rotateX( 40deg );
+			 -o-transform: rotateX( 40deg );
+					transform: rotateX( 40deg );
+	
+}
+*/
+#intro-text {
+  font-family: 'Press Start 2P', monospace;
+  color: white;
+  font-size: 12px;
+  line-height: 30px;
+  font-weight: normal;
+  letter-spacing: 2px;
+  padding-bottom: 250px;
+  text-align: center;
+  padding-top: 700px;
+  padding-bottom: 1200px;
+  width: 100%;
+  max-width: 460px;
+  margin: auto;
+}
+#intro-panel.hidden {
+  opacity: 0;
+}
+#intro-panel.visible {
+  opacity: 1;
+}
+
+#intro-text .vines {
+  background-image: url(img/intro-text.gif);
+  background-size: 464px 400px;
+  background-position: top center;
+  background-repeat: no-repeat;
+}
+#intro-text .vines:after {
+  content: " ";
+  display: block;
+  position: relative;
+  width: 100%;
+  height: 24px;
+  max-width: 460px;
+  background-image: url(img/intro-text-after.gif);
+  background-size: 464px 24px;
+  background-position: bottom center;
+  background-repeat: no-repeat;
+}
+.vines-hline {
+  background-image: url(img/intro-text.gif);
+  background-size: 464px 400px;
+  background-position: top center;
+  background-repeat: no-repeat;
+  height: 24px;
+  overflow: hidden;
+  width: 100%;
+  max-width: 400px;
+  margin: auto;
+  margin-top: 100px;
+  text-align: center;
+}
+#intro-text b {
+  font-weight: normal;
+  color: red;
+}
+#intro-text i {
+  font-weight: normal;
+  font-style: normal;
+  color: cyan;
+}
+#intro-text em {
+  font-weight: normal;
+  font-style: normal;
+  color: lime;
+}
+#intro-text h1 {
+	font-size: 13px;
+	letter-spacing: 2px;
+	color: red;
+	text-align: center;
+	margin-top: 0;
+	display: inline-block;
+	width: auto;
+	background: black;
+	margin: auto;
+	padding: 0 10px;
+}
+#intro-text h2 {
+  font-size: 12px;
+  letter-spacing: 2px;
+  color: cyan;
+  text-align: center;
+  margin-bottom: 0;
+  margin-top: 40px;
+}
+#intro-text pre {
+  margin: auto;
+  font-family: 'Press Start 2P', monospace;
+  font-size: 12px;
+  letter-spacing: 2px;
+}
+
+@media screen and (max-width: 460px) {
+  #intro-text pre {
+    white-space: normal;
+    padding: 0 40px;
+    width: 100%;
+    text-align: justify;
+  }
+}
+
+body {
+  font-family: 'Press Start 2P';
+  transition: background-color 1s;
+  background-color: black;
+  margin: 0;
+  padding: 50px;
+  color: white;
+  line-height: 22px;
+}
+li {
+  margin-top: 12px;
+}
+canvas {
+  display: none;
+}
+
+#game-canvas {
+  position: fixed;
+  left: 0;
+  top: 0;
+  /* image-rendering: pixelated; */
+  background: #f4c6bc;
+  transition: margin-top 1s;
+}
+#game-canvas.paused {
+  margin-top: 340px;
+}
+#game-container {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 100%;
+  height: 100%;
+  background-position: center center;
+  background-repeat: no-repeat;
+  transition: opacity 2s;
+  z-index: 10;
+}
+#game-container.hidden {
+  opacity: 0;
+}
+#game-container.visible {
+  opacity: 1;
+}
+#runner-info-panel {
+  color: white;
+  padding-left: 190px;
+  padding-top: 376px;
+  font-size: 16px;
+  position: relative;
+  z-index: 30;
+}
+#hud-settings-panel {
+  color: #b75635;
+  left: 238px;
+  top: 200px;
+  width: 160px;
+  font-size: 10px;
+  position: absolute;
+  z-index: 900;
+  text-align: center;
+  text-transform: uppercase;
+  line-height: 20px;
+}
+#hud-panel {
+  width: 456px;
+  height: 456px;
+  position: fixed;
+  /*top: 100%;*/
+  margin-top: -458px;
+  top: 0;
+  left: 50%;
+  margin-left: -228px;
+  z-index: 900;
+  transition: opacity 1s, margin-top 1s;
+  image-rendering: pixelated;
+}
+#hud-canvas {
+  display: block;
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 456px;
+  height: 456px;
+  image-rendering: pixelated;
+}
+#hud-panel.hidden {
+  opacity: 0;
+}
+#hud-panel.visible {
+  opacity: 1;
+}
+#hud-panel.paused {
+  opacity: 1;
+  margin-top: -120px;
+}
+
+#hud-hearts {
+  width: 48px;
+  height: 16px;
+  position: absolute;
+  top: 426px;
+  left: 334px;
+  padding: 0;
+  margin; 0;
+  background-image: url(img/hud-heart.png);
+  background-size: 16px 16px;
+  background-repeat: repeat-x;
+  z-index: 20;
+}
+#hud-max-hit-points {
+  width: 48px;
+  height: 16px;
+  position: absolute;
+  top: 426px;
+  left: 334px;
+  background-image: url(img/hud-max-hit-points.png);
+  z-index: 10;
+}
+#hud-room {
+  position: absolute;
+  left: 72px;
+  top: 436px;
+  width: 6px;
+  height: 6px;
+  background-color: #a3bf4e;
+}
+#instructions-panel {
+  color: white;
+  font-size: 8px;
+  text-align: center;
+  top: 100%;
+  left: 0;
+  width: 100%;
+  margin-top: -20px;
+  position: fixed;
+}
+#canvas-light-map {
+  position: absolute;
+  top: 0;
+  left: 0;
+  z-index: 5000;
+  display: none;
+  width: 256px;
+  height: 256px;
+}
+#dpad-panel {
+  position: fixed;
+  z-index: 1000;
+  width: 250px;
+  height: 250px;
+  top: 100%;
+  left: 0;
+  margin-left: -50px;
+  background-image: url(img/controller2.png);
+  background-size: 860px 250px;
+  
+  -webkit-perspective: 150px;
+		 -moz-perspective: 150px;
+			 -o-perspective: 150px;
+					perspective: 150px;
+  perspective-origin: 50% 40%;
+              
+  padding-top: 25px;
+	padding-left: 50px;
+	
+	  user-select: none;
+  -moz-user-select: none;
+  -webkit-user-select: none;
+  -ms-user-select: none;
+  transition: margin-top 2s;
+}
+#dpad-panel.hidden {
+  margin-top: 10px;
+}
+#dpad-panel.visible {
+  margin-top: -170px;
+}
+#dpad {
+	position: absolute;
+	width: 95px;
+	height: 95px;
+	top: 52px;
+	left: 77px;
+	/* border: 1px solid red; */
+	cursor: pointer;
+	background-size: 95px 95px;
+	background-image: url(img/dpad.png);
+	-webkit-transform-style: preserve-3d;
+		 -moz-transform-style: preserve-3d;
+			 -o-transform-style: preserve-3d;
+					transform-style: preserve-3d;
+}
+#button-panel {
+  position: fixed;
+  z-index: 1000;
+  width: 250px;
+  height: 250px;
+  top: 100%;
+  right: 0;
+  margin-right: -35px;
+  background-image: url(img/controller2.png);
+  background-position: 250px 0px;
+  background-size: 860px 250px;
+  transition: margin-top 2s;
+}
+#button-panel.hidden {
+  margin-top: 10px;
+}
+#button-panel.visible {
+  margin-top: -170px;
+}
+#button-start {
+  position: absolute;
+  width: 60px;
+  height: 40px;
+  top: 15px;
+  left: 110px;
+  /* border: 1px solid red; */
+	cursor: pointer;
+	background-position: 451px -15px;
+	background-size: 860px 250px;
+}
+#button-b {
+	position: absolute;
+	width: 65px;
+	height: 80px;
+	top: 75px;
+	left: 75px;
+	/* border: 1px solid red; */
+	cursor: pointer;
+	background-position: 486px -75px;
+	background-size: 860px 250px;
+	/* background-image: url(img/controller2.png); */
+}
+#button-a {
+  position: absolute;
+	width: 65px;
+	height: 80px;
+	top: 75px;
+	left: 140px;
+	/* border: 1px solid red; */
+	cursor: pointer;
+	background-position: 421px -75px;
+	background-size: 860px 250px;
+	/* background-image: url(img/controller2.png); */
+}
+#button-start.pressed, #button-b.pressed, #button-a.pressed {
+  background-image: url(img/controller2.png);
+}
+
+#dpad-panel span {
+  display: inline-block;
+  width: 50px;
+  height: 50px;
+  position: relative;
+  cursor: pointer;
+  /* border: 1px solid red; */
+}
+
+#dpad-panel span#dpad-l { width: 60px; }
+#dpad-panel span#dpad-r { width: 60px; }
+#dpad-panel span#dpad-m { width: 30px; }
+#dpad-panel span#dpad-u { height: 60px; margin-bottom: -10px; }
+#dpad-panel span#dpad-d { height: 60px; margin-top: -10px; }
+
+#progress {
+  position: absolute;
+  top: 50%;
+  margin-top: -10px;
+  width: 100%;
+  text-align: center;
+  color: white;
+}
+#game-over-panel {
+  background: black;
+  color: white;
+  z-index: 5000;
+  font-size: 12px;
+  line-height: 16px;
+  text-transform: uppercase;
+  text-align: left;
+}
+#game-over-panel p, #game-over-panel .mc-field-group {
+  padding: 0 12px;
+}
+#game-over-panel h3 {
+  font-size: 13px;
+	letter-spacing: 2px;
+	color: red;
+	text-align: center;
+	margin-top: 0;
+	display: inline-block;
+	width: auto;
+	background: black;
+	margin: auto;
+	padding: 0 10px;
+	border-top: 7px solid black;
+}
+#game-over-panel .vines-hline {
+  margin-top: 12px;
+}
+
+#game-over-wrapper {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: black;
+  transition: opacity 1s;
+  z-index: 9;
+  text-align: center;
+}
+#game-over-wrapper.hidden {
+  opacity: 0;
+}
+#game-over-wrapper.visible {
+  opacity: 1;
+}
+
+.menu-link { 
+  background-image: none;
+  background-size: 16px 16px;
+  background-position: center left;
+  background-repeat: no-repeat;
+  padding-left: 30px;
+  font-size: 15px;
+  color: white;
+  font-weight: normal;
+  line-height: 60px;
+  letter-spacing: 1px;
+  cursor: pointer;
+}
+.menu-link:hover { 
+  background-image: url(img/hud-heart.png);
+}
+</style>
+<h1>Change Log</h1>
+April 5, 2016
+<ul>
+  <li>Fixed bug where picking up heart container didn't stop health beeps.
+  <li>Picking up a stash of bombs now gives 4 bombs instead of 1.
+  <li>Fixed bug in dungeon 3 where going down the stairs to get the raft took you to dungeon 1. Oops.
+  <li>Darknuts now go faster. Closer to correct speed, I hope.
+</ul>
+</body>
+</html>

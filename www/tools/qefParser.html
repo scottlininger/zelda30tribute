@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html>
+<body>
+<style>
+body {
+  background: silver;
+}
+textarea {
+  font-size: 8px;
+}
+</style>
+<textarea id="input" cols="40" rows="5"></textarea>
+<textarea id="output" cols="40" rows="5"></textarea>
+<div id="drop_zone" style="height: 200px;border:1px dashed green;">Drop .qef file here</div>
+<button onclick="downloadAll()">DOWNLOAD ALL</button>
+
+<script>
+/**
+ * @fileoverview This file is a developer tool that takes a .qef file from
+ *     a voxel editor called Qubicle, and converts it into a layered PNG sprite
+ *     file suitable for being rendered in the project's 3D engine.
+ *
+ *     You can find some same QEFs in /sourceFiles/qef
+ */
+function $(id) { return document.getElementById(id); }
+
+
+function downloadAll() {
+ var fileLinks = document.getElementsByClassName('download-link');
+  for (var i = 0; i < fileLinks.length; i++) {
+    var event = new MouseEvent('click', {
+        'view': window,
+        'bubbles': true,
+        'cancelable': true
+      });
+    console.log(i);
+    fileLinks[i].dispatchEvent(event);
+  }
+};
+
+function buildPng(str, name) {
+
+  var canvas = document.createElement('canvas');
+  canvas.style.border = '1px solid green';
+  canvas.style.display = '1px solid green';
+  canvas.width = 16 * 16;
+  canvas.height = 16;
+  document.body.appendChild(canvas);
+  var ctx = canvas.getContext('2d');
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+  var canvas2 = document.createElement('canvas');
+  canvas2.style.border = '1px solid red';
+  canvas2.width = 16 * 16;
+  canvas2.height = 16;
+  document.body.appendChild(canvas2);
+  var ctx2 = canvas2.getContext('2d');
+  ctx2.clearRect(0, 0, canvas2.width, canvas2.height);
+   
+  var lines = str.split('\n')
+  var colors = [];
+  for (var i = 0; i < lines.length; i++) {
+    var line = lines[i];
+    var parts = line.split(/\s/gi);
+    var nums = [];
+    for (var j = 0; j < parts.length; j++) {
+      if (!isNaN(parseFloat(parts[j]))) {
+        nums.push(parseFloat(parts[j]));
+      }
+    }
+
+    // This is a color record.
+    if (nums.length == 3 && line.indexOf('.') > -1) {
+      var color = 'rgb(' + f255(nums[0]) + ',' +
+                           f255(nums[1]) + ',' +
+                           f255(nums[2]) + ')';
+      console.log('FOUND COLOR: ' + color);
+      colors.push(color)
+    }
+    
+    // This is a pixel.
+    if (nums.length == 5) {
+      var x = nums[0];
+      var z = 15 - nums[1];
+      var y = nums[2];
+      var colorId = nums[3];
+      
+      ctx.fillStyle = colors[colorId];
+      ctx2.fillStyle = colors[colorId];
+      
+      var baseX = y * 16;
+      
+      ctx.fillRect(baseX + x, z, 1, 1);
+      
+      x2 = 16 - x;
+      ctx2.fillRect(baseX + x2, z, 1, 1);
+    }
+  }
+  
+  var a = document.createElement('a');
+	a.href = 'data:' + canvas.toDataURL();
+	a.className = 'download-link';
+	a.download = name.toLowerCase() + '.png';
+	a.innerHTML = a.download;
+	document.body.appendChild(a);
+
+  var a = document.createElement('a');
+	a.href = 'data:' + canvas2.toDataURL();
+	//a.className = 'download-link';
+	a.download = name.toLowerCase() + '-flipped.png';
+	a.innerHTML = a.download;
+	document.body.appendChild(a);
+	
+	var br = document.createElement('br');
+	document.body.appendChild(br);
+}
+
+function f255(value) {
+  return Math.floor(value * 255);
+}
+
+
+//buildPng($('input').value, 'test');
+
+
+
+function handleFileSelect(evt) {
+	evt.stopPropagation();
+	evt.preventDefault();
+	
+	//console.log(evt);
+	var files = evt.dataTransfer.files; // FileList object
+
+	// Loop through the FileList and render image files as thumbnails.
+	for (var i = 0; i < files.length; i++) {
+		var f = files[i]
+		var reader = new FileReader();
+
+		// Closure to capture the file information.
+		reader.onload = (function(theFile) {
+			return function(e) {
+				// Render thumbnail.
+				console.log(reader);
+				console.log(theFile);
+				console.log(reader.result);
+				
+				buildPng(reader.result, theFile.name.replace(/\.qef/gi, ''));
+
+				
+				
+			};
+		})(f);
+
+		// Read in the image file as a data URL.
+		reader.readAsText(f);
+	}
+}
+
+function handleDragOver(evt) {
+	evt.stopPropagation();
+	evt.preventDefault();
+	evt.dataTransfer.dropEffect = 'copy'; // Explicitly show this is a copy.
+}
+
+// Setup the dnd listeners.
+var dropZone = document.getElementById('drop_zone');
+dropZone.addEventListener('dragover', handleDragOver, false);
+dropZone.addEventListener('drop', handleFileSelect, false);
+  
+  
+</script>
+
+</body>
+</html>

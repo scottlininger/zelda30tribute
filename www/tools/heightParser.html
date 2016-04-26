@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html>
+<body>
+<style>
+body {
+  background: silver;
+}
+textarea {
+  font-size: 8px;
+}
+</style>
+<script src="../js/heightmap.js"></script>
+<script src="../js/util/gl-matrix.js"></script>
+
+<canvas id="preview-canvas" width="4096" height="1408" style="border:1px solid red;width:1024px;height:352px;"></canvas>
+<canvas id="alpha-canvas" width="4096" height="1408" style="border:1px solid red;width:1024px;height:352px;"></canvas>
+<img id="overworld" src="overworld_clean.png" style="display:none" />
+<script>
+/**
+ * @fileoverview This develoer tool reads in a PNG of the Zelda overworld and
+ *    a "height map" of the elevations across that overworld. It then generates
+ *    a new PNG file, this time with the elevation baked into the alpha channel
+ *    of each pixel. When the game is being run, a custom shader (found in
+ *    index.html) reads the alpha channel to determine what stuff is "in
+ *    shadow".
+ *
+ *    Now that this has been run, it should never need to be run again, unless
+ *    the overworld changes. The actual file it output can be found in
+ *    www/img/overworld_with_shadow_map15.png. If you open it, you'll see that
+ *    the more transparent the pixel, the "higher" in space the terrain (and
+ *    thus the shadows it casts) are.
+ *
+ * @usage This this is pretty hacky. What you want to do is open it in your
+ *    localhost-connected browser, and wait a long time. You can see there's
+ *    a canvas in the middle of the page that is slowly filled in with the
+ *    alpha-channeled version of the overworld. Once it's 100% done, you then
+ *    right click on that canvas and select "Save As" and overwrite 
+ *    www/img/overworld_with_shadow_map15.png with your new one.
+ */ 
+ 
+/**
+ * Some tiles have "holes" in them, which means they aren't solid blocks,
+ * which means we need to do some extra parsing to get the shadows right.
+ */
+var tileIdsWithHoles = {
+	55: "ow_rock_t",
+	68: "ow_rock_tr",
+	63: "ow_rock_tl",
+	13: "ow_rock_br",
+	15: "ow_rock_bl",
+	
+	5: "forest_rock_br",
+	75: "forest_rock_tr",
+	3: "forest_rock_tl",
+	2: "forest_rock_t",
+	8: 'forest_rock_bl'
+}
+
+/**
+ * Caves were originally modeled in SketchUp to be lower than we
+ * need them to appear from a shadow-mapping perspective, since most caves
+ * now get rendered with rocky "caps" on top of them, so they look cooler.
+ */
+var tileIdsWithHigherAltitude = {
+	0: 32, // "Cave"
+};
+
+
+function inspect(e) {
+  console.log(e);
+  var worldX = e.offsetX;
+  var worldY = 1407 - e.offsetY;
+  var tileId = getTileId(worldX, worldY);
+  console.log(tileId, ace.tileNamesById[tileId], getAltitude(worldX, worldY, true));
+}
+
+function $(id) { return document.getElementById(id); }
+var canvas = $('alpha-canvas');
+var ctx = canvas.getContext('2d');
+
+var previewCanvas = $('preview-canvas');
+var previewCtx = previewCanvas.getContext('2d');
+previewCanvas.onclick = inspect;
+var imageData;
+var currentTileRow = 88;
+var vectorToSun = [-2,-1,2];
+
+function buildShadows(str) {
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  previewCtx.fillStyle = 'white';
+  previewCtx.fillRect(0, 0, canvas.width, canvas.height);
+  previewCtx.drawImage($('overworld'), 0, 0, canvas.width, canvas.height);
+  imageData = previewCtx.getImageData(0, 0, canvas.width, canvas.height).data;
+  nextRow();
+}
+function nextRow() {
+  if (currentTileRow > 0) {
+    currentTileRow--;
+    drawRow(currentTileRow);
+  }
+}
+
+function drawRow(rowTileY) {
+  var baseY = 1408 - (rowTileY * 16) - 16;
+  for (var y = baseY; y < (baseY + 16); y++) {
+		for (var x = 0; x < 4096; x++) {
+		  var tileY = 87 - Math.floor(y / 16);
+		  var tileX = Math.floor(x / 16);
+		  
+		  var worldY = 1407 - y;
+
+			
+		  // 464 is the tallest altitude.
+		  var seekPoint = [x, worldY, getAltitude(x,worldY)];
+
+		  var isInShadow = isPointInShadow(seekPoint);
+		  var baseZ = getAltitude(x,worldY);
+			var shadowEdgeZ = baseZ;
+				
+		  if (isInShadow) {
+				
+
+				var hasFoundShadowEdge = false;
+				while (hasFoundShadowEdge == false && shadowEdgeZ < 500) {
+		      shadowEdgeZ += 1;
+		      hasFoundShadowEdge = !isPointInShadow([x,worldY,shadowEdgeZ]);		    
+		    }
+		    var diffZ = shadowEdgeZ - baseZ;
+		    var alpha = .25 + (diffZ / 300);
+		    
+		    if (x > 2556 && x < 2574 && y == 23) {
+					console.log(x, y, shadowEdgeZ, baseZ);
+				}
+
+		    previewCtx.fillStyle = 'rgba(0,0,0,' + alpha +')';
+				previewCtx.fillRect(x, y, 1, 1);
+		  }
+		  var shadowHeight = shadowEdgeZ;
+		  
+		  // Black is level 464. Every integer above that lowers by 2.
+		  var c = Math.floor((464 - shadowHeight) / 2);
+		  
+		  var imageY = 1407 - worldY;
+			var i = imageY * canvas.width * 4 + x * 4;
+			var r = imageData[i + 0];
+			var g = imageData[i + 1];
+			var b = imageData[i + 2];
+		  var a = c / 255;
+		  
+		  ctx.fillStyle = 'rgba(' + r + ',' + g + ',' + b + ',' + a + ')';
+		  ctx.fillRect(x, y, 1, 1);
+		}  
+  }
+  window.setTimeout(nextRow,0);
+}
+
+function isPointInShadow(seekPoint) {
+	var isInShadow = false;
+	while (isInShadow == false &&
+				 seekPoint[2] < 464 &&
+				 seekPoint[2] > -10) {
+		vec3.add(seekPoint, seekPoint, vectorToSun);
+		
+
+		if (getAltitude(seekPoint[0], seekPoint[1]) >= seekPoint[2]) {
+			isInShadow = true;
+		}
+	}
+	return isInShadow;
+}
+function getAltitude(worldX, worldY, checkColor) {
+  var tileY = Math.floor(worldY / 16);
+	var tileX = Math.floor(worldX / 16);
+	if (tileY < 0 || tileX < 0 || tileX > (4096/16 - 1) || tileY > (87)) {
+	  return 0;
+	}
+	var tileId = ace.tileMap[tileY][tileX];
+  var z = ace.heightMap[tileY][tileX];
+  
+  // Some of our tiles change the base height map, like caves.
+  if (tileIdsWithHigherAltitude[tileId]) {
+    z += tileIdsWithHigherAltitude[tileId];
+    //console.log('igher', tileId);
+  }
+	
+	// Some of our tiles, like the rocks, are not solid blocks,
+	// meaning they have "holes" in them. Correct for that now.
+	if (tileIdsWithHoles[tileId]) {
+	  
+		var imageY = 1407 - worldY;
+		var i = imageY * canvas.width * 4 + worldX * 4;
+		var c = imageData[i + 0];
+		c += ',' + imageData[i + 1];
+		c += ',' + imageData[i + 2];
+		c += ',' + imageData[i + 3];
+		
+		if (checkColor) { console.log(c); }
+		if (c == '252,216,168,255') {
+			z -= 16;
+			if (checkColor) { console.log('DOWN'); }
+		}
+
+	}
+	return z;
+}
+function getTileId(worldX, worldY) {
+  var tileY = Math.floor(worldY / 16);
+	var tileX = Math.floor(worldX / 16);
+	if (tileY < 0 || tileX < 0 || tileX > (4096/16 - 1) || tileY > (87)) {
+	  return 0;
+	}
+	return ace.tileMap[tileY][tileX];
+}
+
+
+window.onload = buildShadows;
+
+
+</script>
+
+</body>
+</html>

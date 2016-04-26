@@ -1,0 +1,685 @@
+<!DOCTYPE html>
+<html>
+<body>
+<script src="../js/util/gl-matrix.js"></script>
+<script src="../js/ace.js"></script>
+<script src="../dungeons/room.js"></script>
+<script src="../dungeons/dungeon.js"></script>
+<style>
+/**
+ * @fileoverview This little helper page attempts to read
+ *     the original LOZ dungeons maps and convert them into
+ *     javascript that defines each dungeon. The files you'll
+ *     find in www/dungeons/*.js were originally generated
+ *     by this tool, and then hand-modified from there to
+ *     fix little things it missed.
+ *
+ *     It's hacky and poorly documented. The good news is that
+ *     at this point it's probably not worth running it ever again.
+ *     But if you do need to run it, you'll need to go to the
+ *     bottom of this file and uncomment the dungeons you want to
+ *     parse.
+ */
+body {
+  background: silver;
+  padding-top: 50px;
+}
+canvas {
+  border: 1px solid red;
+  width: 1024px;
+  height: 704px;
+  image-rendering: pixelated;
+}
+</style>
+<script>
+
+/**
+ * Handy shortcut for getElementById.
+ * @param {string} id The id of the page element you want.
+ */
+function $(id) { return document.getElementById(id); }
+
+/**
+ * Certain tiles we want offset along the x or y. These hashes
+ * store those offsets.
+ */
+xOffsetsByTileName = {
+  'OldMan': -8,
+  'Fire': -8,
+  'Gleeok': -8,
+  'Rupee+xOffset:8': 8,
+  'Stairs+type:\'whistle\'': 16,
+  'Stairs+type:\'wand\'': 16,
+  'Rupee100': -8,
+  'Gohma': -8,
+  'TriforcePiece': 8
+}
+yOffsetsByTileName = {
+  'Stairs+teleportTo:[634,1322,-1008]': -16,
+  'Stairs+book': -16,
+  'TriforcePiece': -8,
+  'OldMan': -8
+}
+
+/*
+The following are actor-types that this tool can find, but that
+have not yet been coded into the game. This is sort of a TODO
+list of known missing bits.
+
+QA NOTE: There is no water in the blue dungeon!
+RoomDarkener
+Rupee+xOffset:8
+Rupee100 ("I bet you'd like to have more bombs")
+Gleeok
+Stairs+type:'whistle'
+Stairs+type:'raft'
+Gibdo (mummy)
+PolsVoice
+Digdogger
+Rope (orange)
+RopeBlue
+Gohma
+DarknutBlue
+Wizzrobe
+Triforce
+Zelda
+Gannon
+*/
+
+/**
+ * Each 16x16 tile in the underlying maps can be identified by a 
+ * long string that's really just a list of some colors that can
+ * be found inside specific locations in the tile. (The actual locations
+ * were identified by trial and error. The goal was to have to read the
+ * fewest number of pixels and still get a unique identifier across
+ * the entire Zelda tile set.)
+ *
+ * This hash identifies the tiles.
+ * @type {Object} A hash of friendly tile name, keyed by a tile code.
+ */
+var tileNamesByCode =
+{"80804888080808080488808080":"barred",
+"000000200200200200200200":"door",
+"4882004882002002002002008020080200":"Block+type:'green'",
+"200168168168168168168168200200200200":"Keese",
+"168168168168168168168200200200200200":"Keese",
+"200200256256460460200200200200200200":"SecretKey",
+"00460000000000":"Fire",
+"7567560000000000":"OldMan",
+"8020080808080808080808080":"barred",
+"2004882002008080000000":"door",
+"200200808080808080808080200":"Zol",
+"200200168168492492168168200200200200":"Trap",
+"200488200200808048880808048880":"locked",
+"802008080808048848880808080":"locked",
+"488488808000080808080488":"locked",
+"4888080800008080808080":"locked",
+"200200460460460460756756200200200200":"Map",
+"0000000000200200":"bombhole",
+"02000000000000":"bombhole",
+"2004882002008080808080808080":"barred",
+"200200200200200200200200200200460460":"TriforcePiece",
+"80080000080008080":"Statue+type:'leftgreen'",
+"20020080200020008080808080":"Statue+type:'rightgreen'",
+"756256256756256756756756256460200200":"Bubble",
+"200200256256460256256460756756756200":"Darknut",
+"8020080808080200200200200200200":"door",
+"200200200200200168168168168168200200":"SecretBomb",
+"200200200200200200200200200200200200":"-",
+"08020020080802002008080200200":"Stairs+type:'raft'",
+"200200200200200200000000":"door",
+"2560256000025600256256":"Statue+type:'leftred'",
+"20020025620002000256256256256256":"Statue+type:'rightred'",
+"168168168168168168492492492492492492":"Manhandla",
+"460460256256256256256256256460460460":"SecretHeartContainer",
+"0256256000000000":"Fire",
+"162168168168168168168168162162162162":"Water",
+"124124256256460460124124124124124124":"SecretKey",
+"124168168168168168168168124124124124":"Keese",
+"488108108108000108108108108108":"locked",
+"298298545400054545454298":"locked",
+"248488248248108108000000":"door",
+"108248108108108108108108108108108108":"barred",
+"248492756168168168492168492492492492":"Manhandla",
+"488248488248248248248248108248108248":"Block+type:'tan'",
+"1080108000010800108108":"Statue+type:'lefttan'",
+"24824810824802480108108108108108":"Statue+type:'righttan'",
+"248488248248108108108108108108108108":"barred",
+"004607564604600046046000":"Rupee",
+"124124168168492492168168124124124124":"Trap",
+"244124244124124124124124162124162124":"Block+type:'tan'",
+"298541245412454124542985412454":"RoomDarkener",
+"124124124124124124000000":"door",
+"000000124124124124124124":"door",
+"1242981241245454000000":"door",
+"108248108108108108248248248248248248":"door",
+"248108488248248248000000":"bombhole",
+"1242985412412412400000124":"bombhole",
+"02480000000000":"bombhole",
+"0000000000248248":"bombhole",
+"24848810824824824800000248":"bombhole",
+"12454298124124124000000":"bombhole",
+"124124460460460460756756124124124124":"Map",
+"162162162162162162162162162162162162":"Water",
+"324324324324324324324324324324324324":"Water",
+"168168168492492492492168492168248492":"Vire",
+"168492492492492492168168168492492248":"Vire",
+"000000000000":"-",
+"108108488108108108108108488108108108":"barred",
+"248248248248248248248248248248460460":"TriforcePiece",
+"168176168248248248248248248248248368":"Gleeok",
+"248460256256256256256256256460248248":"SecretHeartContainer",
+"12412412412400000124124124":"Gel",
+"124298124124545429854545429854":"locked",
+"248248248248248248000000":"door",
+"248488248248108108488108108108488108":"locked",
+"756256256756256756756756256460124124":"Bubble",
+"168168168492492492492168492168124492":"Vire",
+"541245454545429829854545454":"locked",
+"2985454540005454545454":"locked",
+"488488108108000108108108108488":"locked",
+"108248108108108108488488108108108108":"locked",
+"248248000000000248":"Zol",
+"0108248248108108248248108108248248":"Stairs+type:'ladder'",
+"756256256756256756756756256460248248":"Bubble",
+"256460460256256460460256256460756460":"LikeLike",
+"000000248248248248248248":"door",
+"3240324000032400324324":"Statue+type:'leftblue'",
+"24824832424802480324324324324324":"Statue+type:'rightblue'",
+"248248256256460460248248248248248248":"SecretKey",
+"248168168168168168168168248248248248":"Keese",
+"124124460460256756248460256256124124":"Compass",
+"5412454545454124124124124124124":"door",
+"124124000000000124":"Zol",
+"1683688016816816800000168":"bombhole",
+"3688080800008080808080":"locked",
+"368368808000080808080368":"locked",
+"168168168168756756460460168168168168":"Stairs+type:'whistle'",
+"3681683681681681681681688016880168":"Block+type:'lime'",
+"168368168168808036880808036880":"locked",
+"801688080808036836880808080":"locked",
+"168168256256460460168168168168168168":"SecretKey",
+"168168168168168168168168168168168168":"KeeseOrNothingOrSecretBomb",
+"256256256256256256256256256256256256":"Water",
+"0000000000168168":"bombhole",
+"01680000000000":"bombhole",
+"4604600000000000":"Rupee100",
+"22440844084408440224408440":"RoomDarkener",
+"8484256256460460848484848484":"SecretKey",
+"8416816816816816816816884848484":"Keese",
+"756492756492492756492492756492756492":"Gibdo",
+"288460460460460460288288660460460460":"PolsVoice",
+"224224404000040404040224":"locked",
+"16880368168168168000000":"bombhole",
+"168460256256256256256256256460168168":"SecretHeartContainer",
+"8016880808080808080808080":"barred",
+"1683681681688080000000":"door",
+"168168168168168168168168168168460460":"TriforcePiece",
+"16816880168016808080808080":"Statue+type:'rightgreen'",
+"8008000008000256256":"Statue+type:'leftgreen'",
+"168168288168460460460460460460756756":"Digdogger",
+"848446046046046075675684848484":"Map",
+"128128128128128128128128128128128128":"Water",
+"842248484404022440404022440":"locked",
+"848484848484000000":"door",
+"000000168168168168168168":"door",
+"8016880808080168168168168168168":"door",
+"8422484844040000000":"door",
+"8484460460256756844602562568484":"Compass",
+"848425625646025625646075675675684":"Darknut",
+"408440404040848484848484":"door",
+"848449275649249284844924928484":"SecretRupee",
+"848480808080808080808084":"Zol",
+"460460756756460460756460168168168168":"Dodongo",
+"168168168168168168000000":"door",
+"000000848484848484":"door",
+"80803688080808080368808080":"barred",
+"168168808080808080808080168":"Zol",
+"756492460492460460492492756492756492":"Gibdo+carrying:'key'",
+"756492756168492168168168756492756492":"Gibdo+carrying:'bomb'",
+"16816825616801680256256256256256":"Statue+type:'rightred'",
+"08016816880801681688080168168":"Stairs+teleportTo:[120,262,-1008]",
+"168168168168168168765765168168168168":"Stairs+teleportTo:[634,1322,-1008]",
+"168168168168492168168492756756756168":"DarknutBlue",
+"32432425632403240256256256256256":"Statue+type:'rightred'",
+"256460324324460460324460460460460324":"Rope",
+"324324256256460460324324324324324324":"SecretKey",
+"168168492168168168168168492168168168":"barred",
+"324324324324324324000000":"door",
+"324492324324168168000000":"door",
+"000000324324324324324324":"door",
+"168324168168168168324324324324324324":"door",
+"492324492324324324324324168324168324":"Block+type:'blue'",
+"492168168168000168168168168168":"locked",
+"324324324324168168168168168324324324":"Gel",
+"324324460460256756324460256256324324":"Compass",
+"324168492324324324000000":"bombhole",
+"256256756256460460460256756460324324":"Goriya",
+"492492168168000168168168168492":"locked",
+"324492324324168168168168168168168168":"barred",
+"324324460460460460756756324324324324":"Map",
+"32432416832403240168168168168168":"Statue+type:'rightblue'",
+"1680168000016800256256":"Statue+type:'leftblue'",
+"1680168000016800168168":"Statue+type:'leftblue'",
+"32449216832432432400000324":"bombhole",
+"324168168168168168168168324324324324":"Keese",
+"324324492756492492324324492492324324":"SecretRupee",
+"460460256256460460460460460460460460":"SecretKey",
+"460460460460460460256256256256460460":"Moldorm",
+"168324168168168168168168168168168168":"barred",
+"460460756460460460288460324324324324":"Dodongo",
+"324460256256256256256256256460324324":"SecretHeartContainer",
+"324324324324324324324324324324460460":"TriforcePiece",
+"0000000000324324":"bombhole",
+"03240000000000":"bombhole",
+"460460460460256256756756460256460460":"Moldorm",
+"324324324324168756324324324324324324":"MagicalBoomerang",
+"168168756168492492492168756492324324":"GoriyaBlue",
+"54542985454545454298545454":"barred",
+"5412454545454545454545454":"barred",
+"256256460460460460756460460460460460":"Wizzrobe",
+"168168492492492492756492492492492492":"WizzrobeBlue",
+"01240000000000":"bombhole",
+"248248460460460460756756248248248248":"Map",
+"168176168248248248248248248248248248":"Gleeok",
+"248248108108108108108108108108108248":"Zol",
+"248248248248756492248248248248248248":"Stairs+type:'wand'",
+"0000000000564564":"bombhole",
+"05640000000000":"bombhole",
+"348348756348348348348348756348348348":"barred",
+"348564348348348348348348348348348348":"barred",
+"564756564564348348348348348348348348":"barred",
+"564564564564564168168168168168564564":"SecretBomb",
+"564564256256460256256460756756756564":"Darknut",
+"4920492000049200256256":"Statue+type:'leftcyan'",
+"4920492000049200492492":"Statue+type:'leftcyan'",
+"56456449256405640492492492492492":"Statue+type:'rightcyan'",
+"756564756564564564564564348564348564":"Block+type:'gray'",
+"564756564564348348756348348348756348":"locked",
+"348564348348348348756756348348348348":"locked",
+"564564460460460460756756564564564564":"SecretMap",
+"756756168168756168168492168168168168":"Manhandla",
+"564564564564564564564564564564460460":"TriforcePiece",
+"3480348000034800348348":"Statue+type:'leftgray'",
+"56456434856405640348348348348348":"Statue+type:'rightgray'",
+"168168168176368368368176176168176176":"Gleeok",
+"564564168168492168168492756756756564":"DarknutBlue",
+"756256256756256756756756256460564564":"Bubble",
+"0348564564348348564564348348564564":"Stairs",
+"756756348348000348348348348756":"locked",
+"564564492756492492564564492492564564":"SecretRupee",
+"564492492492168168492168492492168564":"Gohma",
+"564564256256460460564564564564564564":"SecretKey",
+"564460256256256256256256256460564564":"SecretHeartContainer",
+"552174282174282174282174552174282174":"RoomDarkener",
+"282282256256460256256460756756756282":"Darknut",
+"28228224628202820246246246246246":"Statue+type:'rightcyan'",
+"2460246000024600256256":"Statue+type:'leftcyan'",
+"174174552174174174174174552174174174":"barred",
+"174282174174174174282282282282282282":"door",
+"564756564564348348000000":"door",
+"56475634856456456400000564":"bombhole",
+"564348756564564564000000":"bombhole",
+"168168168168492168168492492168756756":"Gohma",
+"756348348348000348348348348348":"locked",
+"282282460460256756282460256256282282":"Compass",
+"246246246246246246246246246246246246":"Water",
+"552552174174000174174174174552":"locked",
+"282282282282282282000000":"door",
+"378282378282282282282282246282246282":"Block+type:'gray'",
+"282168168168168168168168282282282282":"Keese",
+"282282256256460460282282282282282282":"SecretKey",
+"282282282282282282282282282282282282":"-",
+"564564564564564564564564564564564564":"-",
+"000000282282282282282282":"door",
+"3480348000034800256256":"Statue+type:'leftgray'",
+"564564564564564564168168168168168168":"Manhandla",
+"756256256756256756756756256460282282":"Bubble",
+"282282348348348348348348348348348282":"Zol",
+"246168168168168168168168246246246246":"WaterAndKeese",
+"564564564564564564564168168756168168":"Manhandla",
+"5645647562562560256256256256564564":"book",
+"552174174174000174174174174174":"locked",
+"282552282282174174174174174174174174":"barred",
+"282282000000000282":"Zol",
+"168168168168168168168282282282282282":"Keese",
+"564564492492492564564564564564564564":"LanmolaBlue",
+"348564348348348348564564564564564564":"door",
+"004604604600000000":"Lanmola",
+"004927564924920049249200":"SecretRupee",
+"282552282282174174552174174174552174":"locked",
+"282282492756492492282282492492282282":"SecretRupee",
+"28255217428228228200000282":"bombhole",
+"000000564564564564564564":"door",
+"564564492492492492492492492564564564":"Patra",
+"460460256256564564564564348564348564":"Block+type:'gray'",
+"56456456456400000564564564":"Gel",
+"564564000000000564":"Zol",
+"168168168492492492492168492168282492":"Vire",
+"282552282282174174000000":"door",
+"02820000000000":"bombhole",
+"5645645645640000564564564564":"Gel",
+"564564564492492492168492492492564564":"Patra",
+"0348168168492492168168348348564564":"TrapAndStairs",
+"564564168168492492168168564564564564":"Trap",
+"282282168168492492168168282282282282":"Trap",
+"1280128000012800128128":"Statue+type:'leftred'",
+"28228212828202820128128128128128":"Statue+type:'rightred'",
+"174282174174174174174174174174174174":"barred",
+"564564460460460460460756460460256564":"Fire",
+"256256256256564564564564564564564564":"Fire",
+"460256460256564564564564564564564564":"Fire",
+"46046046028800000000":"Zelda",
+"256448448448256448448448448448448448":"Gannon",
+"37828228228228282282282282282282282":"Triforce",
+"564564564564564564000000":"door",
+"564564564564564168168168168168256256":"SecretBomb",
+"168168168492492492492168492168564492":"Vire",
+"564564460460460564564564564564564564":"Lanmola",
+"56456425656405640256256256256256":"Statue+type:'rightred'",
+"256460460256256460460256256460256256":"LikeLike",
+"492492564564564564564564564564564564":"Patra",
+"174282174174174174552552174174174174":"locked",
+"17417455217417400174552174174174":"barred",
+"756564492492492492492492492564348564":"Patra",
+"01681681681681681681680000":"Keese",
+"564564492756492492564564492492256256":"SecretRupee",
+"282282256256460460282282282282256256":"SecretKey",
+"56456456456456456400564564564564":"a",
+"0000000000460460":"Rupee+xOffset:8",
+"324324168168492492168168324324324324":"Trap",
+"324324324324324168168168168168324324":"SecretBomb",
+"200200460460256756200460256256200200":"Compass"}
+
+var canvasByName = {};
+var ctxByName = {};
+
+/**
+ * If you double click on a dungeon tile, you can tell the engine
+ * about a tile you've visually identified that is not showing up in
+ * the export. (Once you've done that, it's your responsibility to
+ * copy/paste the tileNamesByCode string from the output screen
+ * and replace the code above, so that upon reload the system
+ * will then read the tile correctly.
+ */
+function onDblClickCanvas(e) {
+  var ctx = e.srcElement.ctx;
+  var cx = Math.floor(e.offsetX * 2 / 16) * 16;
+  var cy = Math.floor(e.offsetY * 2 / 16) * 16;
+  var worldX = cx + 8;
+  var worldY = 1408 - cy - 8;
+  
+  ctx.strokeStyle = 'red';
+  ctx.strokeRect(cx, cy, 16, 16);
+  
+  var tileName = prompt('What is the tile name?');
+  if (tileName) {
+    var code = getTileCode(ctx, cx, cy);
+    if (tileNamesByCode[code] && tileNamesByCode[code] != tileName) {
+      console.log('WARNING: already stored ' + code + ' as ' +
+                  tileNamesByCode[code] + ', not ' + tileName);
+    }
+    tileNamesByCode[code] = tileName;
+    console.log('stored ' + code + ' as ' + tileName);
+  }
+
+}
+
+/**
+ * If you single click on a dungeon tile, the console will log
+ * out all of the information we know about that 16x16 tile.
+ */
+function onClickCanvas(e) {
+  var ctx = e.srcElement.ctx;
+  var cx = Math.floor(e.offsetX * 2 / 16) * 16;
+  var cy = Math.floor(e.offsetY * 2 / 16) * 16;
+  var tileX = (cx - Math.floor(cx / 256) * 256) / 16;
+  var tileY = (cy - Math.floor(cy / 176) * 176) / 16;
+  
+  var worldX = cx + 8;
+  var worldY = 1408 - cy - 8;
+  
+  ctx.strokeStyle = 'red';
+  ctx.strokeRect(cx, cy, 16, 16);
+  
+  console.log(tileX, tileY, getTile(ctx, cx, cy));
+}
+
+
+/**
+ * Looks at the image to figure out the doors for each room, and start
+ * building out output JS code for the dungeon.
+ * @param {Canvas} canvas The dungeon canvas we're currently working on.
+ */
+function parseDoors(canvas) {
+  var ctx = canvas.ctx;
+  for (var roomX = 0; roomX < 2048 / 256; roomX++) {
+    for (var roomY = 0; roomY <= 1408 / 176; roomY++) {
+      var cx = roomX * 256;
+      var cy = 1408 - 176 - (roomY * 176);
+
+      ctx.strokeStyle = 'pink';
+      ctx.fillStyle = 'white';
+      var h = getPixel(ctx, cx + 4, cy + 2);
+      //ctx.fillText(h, cx + 20, cy + 40, 256, 176);
+      //console.log(h);
+      if (h != '0') {
+        ctx.strokeRect(cx, cy, 256, 176);
+        ctx.fillText(roomX + ',' + roomY, cx + 10, cy + 20, 256, 176);
+        canvas.code += '\n\n//-------------------------------------------------\n' +
+                       '// Room ' + roomX + ',' + roomY + '\n' +
+                       '//-------------------------------------------------\n' +
+                       'var room = dungeon.addRoom(' + roomX + ',' + roomY + ');\n';
+        parseExitByFacing(canvas, 'left', roomX, roomY, 1, 5);
+        parseExitByFacing(canvas, 'right', roomX, roomY, 14, 5);
+        parseExitByFacing(canvas, 'up', roomX, roomY, 7, 1);
+        parseExitByFacing(canvas, 'down', roomX, roomY, 7, 9);
+        
+        // Now look at all interior tiles and create actors.
+        for (var tileX = 1; tileX <= 14; tileX++) {        
+          for (var tileY = 1; tileY <= 9; tileY++) {
+            var worldX = roomX * 256 + tileX * 16 + 8;
+            var worldY = ((roomY + 1) * 176 - tileY * 16 - 8);
+            var tile = getRoomTile(ctx, roomX, roomY, tileX, tileY);
+            if (tile && tile != '-') {
+              var settings = '';
+              if (tile.indexOf('+') > -1) {
+                var parts = tile.split('+');
+                tile = parts[0];
+                settings = ',{' + parts[1] + '}';
+              }
+              if (tile == 'Water' && canvas.dungeonName == 'Dungeon2') {
+                continue;
+              }
+              var xOffset = xOffsetsByTileName[tile] || 0;
+              var yOffset = yOffsetsByTileName[tile] || 0;
+              
+              // If the first letter is capital, then it's an actor.
+              if (tile.substr(0,1) == tile.substr(0,1).toUpperCase()) {
+                canvas.code += "room.addActor('" + tile + "'," + (worldX + xOffset) +
+                               "," + (worldY + yOffset) + settings + ");\n";
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+  
+  // This bit outputs a download link to the top of the page.
+  var a = document.createElement('a');
+  a.download = canvas.dungeonName.toLowerCase() + '.js';
+  a.href = 'data:text/plain;charset=utf-8,' + encodeURIComponent(canvas.code);
+  a.innerHTML = a.download;
+  document.getElementById('downloads').appendChild(a);
+}
+
+/**
+ * Looks at tiles to determine if a current room can be 
+ */
+function parseExitByFacing(canvas, facing, roomX, roomY, tileX, tileY) {
+  var ctx = canvas.ctx;
+  var tile = getRoomTile(ctx, roomX, roomY, tileX, tileY);
+  var worldX = roomX * 256 + tileX * 16 + 8;
+  var worldY = ((roomY + 1) * 176 - tileY * 16 - 8);
+  
+  if (facing == 'up' || facing == 'down') {
+    worldX += 8;
+  }
+
+  canvas.code += "room.exitByFacing['" + facing + "'] = ";
+  if (tile == 'door') {
+    drawPreview(ctx, roomX, roomY, tileX + ace.xMultByFacing[facing], tileY - ace.yMultByFacing[facing], 'lime', 'O');  
+    canvas.code += 'ace.OPEN;\n';
+  } else if (tile == 'barred') {
+    drawPreview(ctx, roomX, roomY, tileX + ace.xMultByFacing[facing], tileY - ace.yMultByFacing[facing], 'lime', 'BR');  
+    canvas.code += 'ace.OPEN;\n';
+    canvas.code += 'room.addActor(\'BarredDoor\',' + worldX + ',' + worldY + ');\n';
+  } else if (tile == 'locked') {
+    drawPreview(ctx, roomX, roomY, tileX + ace.xMultByFacing[facing], tileY - ace.yMultByFacing[facing], 'lime', 'LK');  
+    canvas.code += 'ace.OPEN;\n';
+    canvas.code += 'room.addActor(\'LockedDoor\',' + worldX + ',' + worldY + ');\n';
+  } else if (tile == 'bombhole') {
+    drawPreview(ctx, roomX, roomY, tileX + ace.xMultByFacing[facing], tileY - ace.yMultByFacing[facing], 'lime', 'BM');  
+    canvas.code += 'ace.BOMBABLE;\n';
+    canvas.code += 'room.addActor(\'BombHole\',' + worldX + ',' + worldY + ');\n';
+  } else {
+    drawPreview(ctx, roomX, roomY, tileX + ace.xMultByFacing[facing], tileY - ace.yMultByFacing[facing], 'red', 'X');  
+    canvas.code += 'ace.WALL;\n';
+  }
+  
+  var exitsByDungeonName = {
+    'Dungeon2': "room.addActor('CaveExit', 2*256+128, 0, {teleportTo: [3192,810, -16]});",
+    'Dungeon3': "room.addActor('CaveExit', 3*256+128, 0, {teleportTo: [1157,107, -16]});",
+    'Dungeon4': "room.addActor('CaveExit', 2*256+128, 0, {teleportTo: [1417,625, -16]});",
+    'Dungeon5': "room.addActor('CaveExit', 2*256+128, 0, {teleportTo: [2936,1334, -16]});",
+    'Dungeon6': "room.addActor('CaveExit', 1*256+128, 0, {teleportTo: [645,982, -16]});",
+    'Dungeon7': "room.addActor('CaveExit', 1*256+128, 0, {teleportTo: [628,602,0]});",
+    'Dungeon8': "room.addActor('CaveExit', 3*256+128, 0, {teleportTo: [3475,312,0]});",
+    'Dungeon9': "room.addActor('CaveExit', 6*256+128, 0, {teleportTo: [1365,1299, -16]});"
+  };
+  if (facing == 'down' && roomY == 0) {
+    canvas.code += exitsByDungeonName[canvas.dungeonName] + "\n";
+  }
+};
+
+
+/**
+ * Looks at tiles to determine if a current room can be 
+ */
+function drawPreview(ctx, roomX, roomY, tileX, tileY, fillStyle, letter) {
+  ctx.fillStyle = fillStyle;
+  ctx.globalAlpha = .5;
+  ctx.fillRect(roomX * 256 + tileX * 16,
+               1408 - 176 - (roomY * 176) + tileY * 16, 16, 16);
+  if (letter) {
+    ctx.fillStyle = 'white';
+    ctx.fillText(letter, roomX * 256 + tileX * 16,
+                 1408 - 176 - (roomY * 176) + tileY * 16 + 8);
+  }
+  ctx.globalAlpha = 1;
+};
+                 
+/**
+ * Loads the dungeon image from disk.
+ */
+function loadDungeon(name, url) {
+  var canvas =  document.createElement('canvas');
+  var dungeonNumber = name.substr(-1,1);
+  
+  canvas.dungeonName = name;
+  
+  canvas.code = `/**
+ * @fileoverview  Create dungeon.
+ * @author scott@scottlininger.com (Scott Lininger)
+ */
+
+
+/**
+ * Setup calls for dungeon.
+ * @type {ace.Dungeon}
+ */
+ace.dungeons = ace.dungeons || {};
+var dungeon = new ace.Dungeon('` + url.replace('../', '') + `');
+ace.dungeons['` + dungeonNumber + `'] = dungeon;
+ace.dungeons['` + dungeonNumber + `'].name = '` + name + `';
+ 
+ `;
+ 
+  canvas.name = name;
+  canvas.dungeon = new ace.Dungeon(url);
+  canvas.width = 2048;
+  canvas.height = 1408;
+  canvasByName[name] = canvas;
+  
+  var ctx = canvas.getContext('2d');
+  canvas.ctx = ctx;
+  canvasByName[name] = canvas;
+  ctxByName[name] = ctx;  
+
+  var img = document.createElement('img');
+  img.onload = function() {
+    ctx.drawImage(img, 0, 0);
+    parseDoors(canvas);
+  }
+  img.src = url;
+  document.body.appendChild(canvas);
+  canvas.onclick = onClickCanvas;
+  canvas.ondblclick = onDblClickCanvas;
+  
+  
+}
+
+function getPixel(ctx, x, y) {
+  var p = ctx.getImageData(x, y, 1, 1).data; 
+  return (p[0] + p[1] + p[2]) + '';
+}
+
+function getTileCode(ctx, x, y) {
+  return getPixel(ctx, x+3, y+2) + getPixel(ctx, x+3, y+3) +
+         getPixel(ctx, x+5, y+4) + getPixel(ctx, x+5, y+5) +
+         getPixel(ctx, x+7, y+6) + getPixel(ctx, x+7, y+7) +
+         getPixel(ctx, x+9, y+8) + getPixel(ctx, x+9, y+9) +
+         getPixel(ctx, x+11, y+10) + getPixel(ctx, x+11, y+11) +
+         getPixel(ctx, x+13, y+12) + getPixel(ctx, x+13, y+13);
+}
+
+function getTile(ctx, x, y) {
+  var code = getTileCode(ctx, x, y);
+  return tileNamesByCode[code];
+}
+
+function getRoomTile(ctx, roomX, roomY, tileX, tileY) {
+  var code = getTileCode(ctx, roomX * 256 + tileX * 16,
+                              1408 - 176 - (roomY * 176) + tileY * 16);
+  return tileNamesByCode[code];
+}
+
+function rgbToHex(r, g, b) {
+  if (r > 255 || g > 255 || b > 255)
+      throw "Invalid color component";
+  return ((r << 16) | (g << 8) | b).toString(16);
+}
+
+/**
+ * Uncomment the dungeons you actually want to parse, then
+ * load this page in a localhost server. After a few seconds,
+ * The top of your webpage will have download links for that
+ * raw dungeonX.js file as found in /www/dungeons
+ */
+//loadDungeon('Dungeon2', '../dungeons/dungeon2.png');
+//loadDungeon('Dungeon3', '../dungeons/dungeon3.png');
+loadDungeon('Dungeon4', '../dungeons/dungeon4.png');
+//loadDungeon('Dungeon5', '../dungeons/dungeon5.png');
+//loadDungeon('Dungeon6', '../dungeons/dungeon6.png');
+//loadDungeon('Dungeon7', '../dungeons/dungeon7.png');
+//loadDungeon('Dungeon8', '../dungeons/dungeon8.png');
+//loadDungeon('Dungeon9', '../dungeons/dungeon9.png');
+
+
+</script>
+<div id="downloads" style="position:fixed;top:10px;left:10px;font-size:15px;">
+Click to download: 
+</div>
+</body>
+</html>
