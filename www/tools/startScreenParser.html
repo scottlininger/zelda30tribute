@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html>
+<body>
+<style>
+body {
+  background: silver;
+}
+</style>
+<script src="../js/heightmap.js"></script>
+<script src="../js/util/gl-matrix.js"></script>
+
+
+<img src="../../sourceFiles/StartScreenLayers/C00.png">
+<img src="../../sourceFiles/StartScreenLayers/C01.png">
+<img src="../../sourceFiles/StartScreenLayers/C02.png">
+<img src="../../sourceFiles/StartScreenLayers/C03.png">
+<img src="../../sourceFiles/StartScreenLayers/C04.png">
+<img src="../../sourceFiles/StartScreenLayers/C05.png">
+<img src="../../sourceFiles/StartScreenLayers/C06.png">
+<img src="../../sourceFiles/StartScreenLayers/C07.png">
+<img src="../../sourceFiles/StartScreenLayers/C08.png">
+<img src="../../sourceFiles/StartScreenLayers/C09.png">
+<img src="../../sourceFiles/StartScreenLayers/C10.png">
+<img src="../../sourceFiles/StartScreenLayers/C11.png">
+<img src="../../sourceFiles/StartScreenLayers/C12.png">
+<img src="../../sourceFiles/StartScreenLayers/C13.png">
+<img src="../../sourceFiles/StartScreenLayers/C14.png">
+<img src="../../sourceFiles/StartScreenLayers/C15.png">
+
+<script>
+/**
+ * @fileoverview This developer tool loads in a set of 16 pngs, each
+ *     representing a "layer" of the startup screen logo. (These layers
+ *     were originally drawn in Photoshop, then each layer exported to a
+ *     png in the sourceFiles/StartScreenLayers/ folder.)
+ *
+ *     It then generates a set of specifically-named sprite PNGs (16x256 images
+ *     which in themselves represent a stack of 16x16 voxels) that the
+ *     actors/startscreen.js actor then uses to draw the animated start screen.)
+ *
+ *     To run it, the idea is that you make changes to the 
+ *     sourceFiles/StartScreenLayers/*.png files, then open this file in your
+ *     localhost browser. It will download a big set of smaller PNGs with names
+ *     like title-0-15.png. You'll then copy those files from wherever your
+ *     browser downloaded them into /www/img/title/. Then the next time you
+ *     load the game, the big, rotating logo will have your changes. Bleh.
+ */
+function $(id) { return document.getElementById(id); }
+
+
+function go() {
+
+  var images = document.getElementsByTagName('img');
+  console.log(images);
+  var code = '';
+  
+  for (var c = 0; c < 12; c++) {
+		for (var r = 0; r < 6; r++) {
+			
+			var canvas = document.createElement('canvas');
+			canvas.width = 16 * 16;
+			canvas.height = 16;
+			canvas.style.border = '1px solid red';
+			document.body.appendChild(canvas);
+			var ctx = canvas.getContext('2d');
+
+		  
+				
+			for (var z = 0; z < 16; z++) {
+			
+				var img = images[z];
+
+				var readX = c * 16;
+			  var readY = r * 16;
+				var writeX = z * 16;
+				var writeY = 0;
+				
+				ctx.drawImage(img, readX, readY, 16, 16,
+											writeX, writeY, 16, 16);
+			}
+			
+			var a = document.createElement('a');
+			a.href = 'data:' + canvas.toDataURL();
+			var name = 'title' + c + '-' + r;
+			a.download = name + '.png';
+			
+			//console.log("  this.registerVoxelSprite('" + name +
+			//    "', 'img/title/" + a.download + "');");
+			a.innerHTML = a.download;
+			document.body.appendChild(a);
+			
+		}
+	}
+
+	var fileLinks = document.getElementsByTagName('a');
+  for (var i = 0; i < fileLinks.length; i++) {
+    var event = new MouseEvent('click', {
+        'view': window,
+        'bubbles': true,
+        'cancelable': true
+      });
+    console.log(i);
+    fileLinks[i].dispatchEvent(event);
+  }
+
+}
+
+
+
+window.onload = go;
+
+
+</script>
+
+</body>
+</html>

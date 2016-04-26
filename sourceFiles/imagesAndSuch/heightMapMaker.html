@@ -1,0 +1,34 @@
+<html>
+<head>
+
+</head>
+<body>
+<button onclick="build()">Build</button>
+<script>
+var h = 1408;
+var w = 4096;
+
+function build() {
+  var ctx = document.getElementById('canvas').getContext('2d');
+  for (var x = 0; x < w; x+=16) {
+    for (var y2 = 0; y2 < h; y2+=16) {
+      var val = (y[y2 + 8][x + 8] - 1);
+      //console.log(val);
+      ctx.fillStyle = 'rgb(' + val + ',0,0)';
+      ctx.fillRect(x / 16, y2 / 16,1,1);
+    }
+  }
+}
+</script>
+<canvas id="canvas" width="256" height="88" style="border: 1px solid red"></canvas>
+
+<script>
+var y = {};
+
+//for (var i = 0; i < 1408; i++) {
+for (var i = 0; i < h; i++) {
+  document.write('<script type="text/javascript" src="out' + i + '.js"><' + '/script>');
+}
+</script>
+</body>
+</html>

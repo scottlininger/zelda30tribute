@@ -1,0 +1,395 @@
+<!DOCTYPE html>
+<html>
+<body>
+<style>
+body {
+  background: silver;
+}
+canvas {
+  border: 1px solid black;
+}
+textarea {
+  font-size: 8px;
+}
+</style>
+<button onclick="downloadAll()">Download All</button><p>
+<canvas id="canvas" width="32" height="16" style="width:320px;height:160px"></canvas><p>
+<script>
+
+function $(id) { return document.getElementById(id); }
+
+function downloadAll() {
+	var fileLinks = document.getElementsByClassName('downloadable-file');
+  for (var i = 0; i < fileLinks.length; i++) {
+    var event = new MouseEvent('click', {
+        'view': window,
+        'bubbles': true,
+        'cancelable': true
+      });
+    console.log(i);
+    fileLinks[i].dispatchEvent(event);
+  }
+}
+
+function dec2hex(d) {
+
+  var hex = Number(d).toString(16);
+  var padding = 2;
+
+  while (hex.length < padding) {
+    hex = "0" + hex;
+  }
+
+  return hex;
+}
+
+function getPixel(imgData, x, y) {
+  var w = voxelSpriteSize * 2;
+  var index = (y * w + x) * 4;
+  var r = imgData.data[index];
+  var g = imgData.data[index + 1];
+  var b = imgData.data[index + 2];
+  var a = imgData.data[index + 3];
+  var hex = '#' + dec2hex(r) + dec2hex(g) + dec2hex(b) + dec2hex(a);
+  hex = hex.toUpperCase();
+  return { r: r, g: g, b: b, a: a, rgb: r + ',' + g + ',' + b,
+           rgba: 'rgba(' + r + ',' + g + ',' + b + ',' + a + ')', hex: hex };
+}
+
+function buildVoxel(imgData, spriteRecord, isTopSprite) {
+  console.log(spriteRecord.name);
+
+  // Create a 3-dimensional array to store our pixel data.
+  // As we go, "extrude" the first view through Z. 
+  var voxel = [];
+  for (var x = 0; x < voxelSpriteSize; x++) {
+    voxel[x] = [];
+    for (var y = 0; y < voxelSpriteSize; y++) {
+      voxel[x][y] = [];
+      for (var z = 0; z < voxelSpriteSize; z++) {
+        var p = getPixel(imgData, x, y);
+        voxel[x][y][z] = p.hex;
+      };
+    }
+  }
+
+  // Now go through the 2nd sprite and cut out any transparent overlap.
+  for (var x2 = voxelSpriteSize; x2 < voxelSpriteSize * 2; x2++) {
+    for (var y2 = 0; y2 < voxelSpriteSize; y2++) {
+      var y1 = y2;
+      var z1 = voxelSpriteSize - 1 - (x2 - voxelSpriteSize);
+      var p2 = getPixel(imgData, x2, y2);
+
+      // If the 2nd view has a transparent pixel, cut a transparent channel
+      // all the way through.
+      if (p2.hex == '#00000000') {
+        for (var x1 = 0; x1 < voxelSpriteSize; x1++) {
+          voxel[x1][y1][z1] = '#00000000';
+        }
+      } else {
+
+        // Otherwise, apply the side's pixel color to the first and last
+        // non-transparent pixel in the row.
+        if (spriteRecord.useSidePixels) {
+					for (var x1 = 0; x1 < voxelSpriteSize; x1++) {
+						var current = voxel[x1][y1][z1];
+						if (current != '#00000000') {
+							voxel[x1][y1][z1] = p2.hex;
+							break;
+						}
+					}
+	
+					for (var x1 = voxelSpriteSize - 1; x1 >= 0; x1--) {
+						var current = voxel[x1][y1][z1];
+						if (current != '#00000000') {
+							voxel[x1][y1][z1] = p2.hex;
+							break;
+						}
+					}
+				}
+      }
+    }
+  }
+
+  outputCsv(voxel,spriteRecord.name);
+};
+
+
+
+function buildVoxelTop(imgData, spriteRecord) {
+  console.log(spriteRecord.name);
+
+  // Create a 3-dimensional array to store our pixel data.
+  // As we go, "extrude" the first view through Z. 
+  var voxel = [];
+  for (var x = 0; x < voxelSpriteSize; x++) {
+    voxel[x] = [];
+    for (var y = 0; y < voxelSpriteSize; y++) {
+      voxel[x][y] = [];
+      for (var z = 0; z < voxelSpriteSize; z++) {
+        voxel[x][y][z] = null;
+      };
+    }
+  }
+
+  for (var x = 0; x < voxelSpriteSize; x++) {
+    for (var y = 0; y < voxelSpriteSize; y++) {
+      for (var z = 0; z < voxelSpriteSize; z++) {
+        var p = getPixel(imgData, x, y);
+        voxel[x][z][y] = p.hex;
+      };
+    }
+  }
+  
+  // Now go through the 2nd sprite and cut out any transparent overlap.
+  if (true) {
+		for (var x2 = voxelSpriteSize; x2 < voxelSpriteSize * 2; x2++) {
+			for (var y2 = 0; y2 < voxelSpriteSize; y2++) {
+				var y1 = y2;
+				var z1 = voxelSpriteSize - 1 - (x2 - voxelSpriteSize);
+				var p2 = getPixel(imgData, x2, y2);
+	
+				// If the 2nd view has a transparent pixel, cut a transparent channel
+				// all the way through.
+				if (p2.hex == '#00000000') {
+					for (var x1 = 0; x1 < voxelSpriteSize; x1++) {
+						voxel[15-z1][y1][x1] = '#00000000';
+					}
+				} else {
+	
+					// Otherwise, apply the side's pixel color to the first and last
+					// non-transparent pixel in the row.
+					if (false && spriteRecord.useSidePixels) {
+						for (var z1 = 0; z1 < voxelSpriteSize; z1++) {
+							var current = voxel[x1][y1][z1];
+							if (current != '#00000000') {
+								voxel[x1][y1][z1] = p2.hex;
+								break;
+							}
+						}
+		
+						for (var z1 = voxelSpriteSize - 1; z1 >= 0; z1--) {
+							var current = voxel[x1][y1][z1];
+							if (current != '#00000000') {
+								voxel[x1][y1][z1] = p2.hex;
+								break;
+							}
+						}
+					}
+				}
+			}
+		}
+			
+  }
+
+  outputCsv(voxel,spriteRecord.name);
+};
+
+var sideSprites = [
+  { name: 'OldMan1', useSidePixels:true},
+  { name: 'OldMan2', useSidePixels:true},
+  { name: 'OldWoman', useSidePixels:true},
+  { name: 'Vendor', useSidePixels:true},
+  { name: 'Princess', useSidePixels:true},
+  { name: 'TriForcePieceOrange', useSidePixels:true},
+  { name: 'PrincessHolding', useSidePixels:true},
+  { name: 'FairyEven', useSidePixels:true},
+  { name: 'FairyOdd', useSidePixels:true},
+  { name: 'ArrowGreen', useSidePixels:true},
+  { name: 'RayBlue', useSidePixels:true},
+  { name: 'BigHeart', useSidePixels:true},
+  { name: 'ShieldOrange', useSidePixels:true},
+  { name: 'MagicSword', useSidePixels:true},
+  { name: 'CandleRed', useSidePixels:true},
+  { name: 'Meat', useSidePixels:true},
+  { name: 'Bomb', useSidePixels:true},
+  { name: 'RingBlue', useSidePixels:true},
+  { name: 'Book', useSidePixels:true},
+  { name: 'Map', useSidePixels:true},
+  { name: 'Bracelet', useSidePixels:true},
+  { name: 'Key', useSidePixels:true},
+  { name: 'Bow', useSidePixels:true},
+  { name: 'PotionRed', useSidePixels:true},
+  { name: 'SerpentNeck', useSidePixels:true},
+  { name: 'LinkHolding2', useSidePixels:true},
+  { name: 'LinkHolding1', useSidePixels:true},
+  { name: 'WandBlue', useSidePixels:true},
+  { name: 'Ladder', useSidePixels:true},
+  { name: 'Clock', useSidePixels:true},
+  { name: 'LionKey', useSidePixels:true},
+  { name: 'DragonHead', useSidePixels:true},
+  { name: 'DragonFront', useSidePixels:true},
+  { name: 'DragonBack', useSidePixels:true},
+  { name: 'DinoFront', useSidePixels:true},
+  { name: 'DinoBack', useSidePixels:true},
+  { name: 'DinoFrontHurt', useSidePixels:true},
+  { name: 'DinoBackHurt', useSidePixels:true},
+  { name: 'CrabEyeOpen', useSidePixels:true},
+  { name: 'CrabLegsEven', useSidePixels:true},
+  { name: 'CrabLegsOdd', useSidePixels:true},
+  { name: 'CrabEyeClosed', useSidePixels:true},
+  { name: 'TreeTopLeftBrown', useSidePixels:true},
+  { name: 'TreeBottomLeftBrown', useSidePixels:true},
+  { name: 'TreeTopRightBrown', useSidePixels:true},
+  { name: 'TreeBottomRightBrown', useSidePixels:true},
+  { name: 'TreeFaceBrown', useSidePixels:true},
+  { name: 'TempleTopLeftGreen', useSidePixels:true},
+  { name: 'TempleBottomLeftGreen', useSidePixels:true},
+  { name: 'TempleFaceGreen', useSidePixels:true},
+  { name: 'TempleFaceWhite', useSidePixels:true},
+  { name: 'GoblinOrange', useSidePixels:true},
+  { name: 'OrcOrange', useSidePixels:true},
+  { name: 'Fire', useSidePixels:true},
+  { name: 'WormOrange', useSidePixels:true},
+  { name: 'WizardOrange', useSidePixels:true},
+  { name: 'DemonUp', useSidePixels:true},
+  { name: 'DemonDown', useSidePixels:true},
+  { name: 'JumperDownOrange', useSidePixels:true},
+  { name: 'JumperUpOrange', useSidePixels:true},
+  { name: 'Ghost', useSidePixels:true},
+  { name: 'RobotEvenOrange', useSidePixels:true},
+  { name: 'RobotOddOrange', useSidePixels:true},
+  { name: 'Skeleton', useSidePixels:true},
+  { name: 'MouseDown', useSidePixels:true},
+  { name: 'MouseUp', useSidePixels:true},
+  { name: 'Mummy', useSidePixels:true},
+  { name: 'BigBlobDown', useSidePixels:true},
+  { name: 'BigBlobUp', useSidePixels:true},
+  { name: 'SmallBlobDown', useSidePixels:true},
+  { name: 'SmallBlobUp', useSidePixels:true},
+  { name: 'DustPile', useSidePixels:true},
+  { name: 'TriForceOrange', useSidePixels:true},
+  { name: 'TriForceBlue', useSidePixels:true},
+  { name: 'ChargerOddOrange', useSidePixels:true},
+  { name: 'ChargerEvenOrange', useSidePixels:true},
+  { name: 'SnakeOdd', useSidePixels:true},
+  { name: 'SnakeEven', useSidePixels:true},
+  { name: 'FoamUp', useSidePixels:true},
+  { name: 'FoamDown', useSidePixels:true},
+  { name: 'FishHead', useSidePixels:true},
+  { name: 'LikeLikeSmall', useSidePixels:true},
+  { name: 'LikeLikeMedium', useSidePixels:true},
+  { name: 'LikeLikeLarge', useSidePixels:true},
+  { name: 'CaterpillarHeadOrange', useSidePixels:true},
+  { name: 'CaterpillarBodyOrange', useSidePixels:true},
+  { name: 'DiggerOrange', useSidePixels:true},
+  { name: 'Whistle', useSidePixels:true}
+];
+
+var topSprites = [
+  { name: 'EyeBlobSmall', useSidePixels:false},
+  { name: 'EyeBlobLarge', useSidePixels:false},
+  { name: 'RaftOrange', useSidePixels:false},
+  { name: 'FlyTrapMouthClosed', useSidePixels:false},
+  { name: 'FlyTrapMouthOpen', useSidePixels:false},
+  { name: 'FlyTrapBody', useSidePixels:false},
+  { name: 'GargoyleBlockBlue', useSidePixels:false},
+  { name: 'GryphonBlockBlue', useSidePixels:false},
+  { name: 'BlockGray', useSidePixels:false},
+  { name: 'HandOpen', useSidePixels:false},
+  { name: 'HandClosed', useSidePixels:false},
+  { name: 'BubbleOrange', useSidePixels:false},
+  { name: 'BatOddBlue', useSidePixels:false},
+  { name: 'BatEvenBlue', useSidePixels:false},
+  { name: 'SpikeBlue', useSidePixels:false},
+  { name: 'SpinnerOrange', useSidePixels:false},
+  { name: 'PatraHead', useSidePixels:false},
+  { name: 'PatraFlyOdd', useSidePixels:false},
+  { name: 'PatraFlyEven', useSidePixels:false},
+  { name: 'Compass', useSidePixels:false},
+  { name: 'BoomerangOrange', useSidePixels:false},
+  { name: 'BoomerangBlue', useSidePixels:false},
+  { name: 'LadderFlat', useSidePixels:false}
+]
+  
+  
+function outputCsv(voxel, name) {
+
+  var canvas = document.createElement('canvas');
+  canvas.width = 256;
+  canvas.height = 16;
+  canvas.style.border = '1px solid green';
+  var ctx = canvas.getContext('2d');
+  ctx.clearRect(0,0,256,16);
+  document.body.appendChild(canvas);
+
+  var str = voxelSpriteSize + ',' + voxelSpriteSize + ',' + voxelSpriteSize + "\n";
+  
+  for (var y = 0; y < voxelSpriteSize; y++) {
+    for (var z = 0; z < voxelSpriteSize; z++) {
+      for (var x = 0; x < voxelSpriteSize; x++) {
+        //var p = getPixel(imgData, x, y);
+        //str += p.hex;
+        str += voxel[x][y][z];
+        
+        
+        ctx.fillStyle = voxel[x][y][z].substr(0,7);
+        var a = voxel[x][y][z].substr(7,2);
+        //console.log(voxel[x][y][z].substr(0,7), a);
+        //throw 'boo';
+        if (a != '00') {
+          ctx.fillRect(x + (z) * 16, y, 1, 1);
+        }
+         
+        if (x == voxelSpriteSize - 1) {
+          str += "\n";
+        } else {
+          str += ",";
+        }
+      }
+    }
+    str += "\n";
+  }
+
+  var csvLink = document.createElement('a');
+  csvLink.href = canvas.toDataURL(); //'data:text/html,' + encodeURIComponent(str);
+  csvLink.download = name + '.png';
+  csvLink.className = 'downloadable-file';
+  csvLink.appendChild(document.createTextNode(csvLink.download));
+  document.body.appendChild(csvLink);
+  document.body.appendChild(document.createElement('br'));
+}
+
+
+var ctx = $('canvas').getContext('2d');
+var img = new Image();
+var voxelSpriteSize = 16;
+
+window.onload = function() {
+
+  var sideSpriteImg = $('side-sprites');
+  for (var i = 0; i < sideSprites.length; i++) {
+    var canvas = document.createElement('canvas');
+    canvas.width = 32;
+    canvas.height = 16;
+    document.body.appendChild(canvas);
+    var ctx = canvas.getContext('2d');
+    ctx.clearRect(0, 0, 32, 32);
+		ctx.drawImage(sideSpriteImg, 0, -16 * i);
+		var data = ctx.getImageData(0, 0, voxelSpriteSize * 2, voxelSpriteSize);
+		buildVoxel(data, sideSprites[i]);
+  }
+  
+  var topSpriteImg = $('top-sprites');
+  for (var i = 0; i < topSprites.length; i++) {
+    var canvas = document.createElement('canvas');
+    canvas.width = 32;
+    canvas.height = 16;
+    document.body.appendChild(canvas);
+    var ctx = canvas.getContext('2d');
+    ctx.clearRect(0, 0, 32, 32);
+		ctx.drawImage(topSpriteImg, 0, -16 * i);
+		var data = ctx.getImageData(0, 0, voxelSpriteSize * 2, voxelSpriteSize);
+		buildVoxelTop(data, topSprites[i]);
+  }
+};
+//img.src = 'img/linkVoxel.png';
+//img.src = 'img/blueSoldierVoxel.png';
+img.src = 'voxelSourceImages/turtleVoxel.png';
+
+</script>
+<img src="side-sprites.png" id="side-sprites" style="float:right" />
+<img src="top-sprites.png" id="top-sprites" style="float:right" />
+
+</body>
+</html>

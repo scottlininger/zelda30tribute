@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html>
+<body>
+<style>
+body {
+  background: silver;
+}
+textarea {
+  font-size: 8px;
+}
+</style>
+<textarea id="input" cols="40" rows="25"># PASTE YOUR OBJ FILE TEXT HERE AND PUSH THE BUTTON.
+
+# Alias OBJ Model File
+# Exported from SketchUp, (c) 2000-2012 Trimble Navigation Limited
+# File units = inches
+
+mtllib lozOverworldBroad_door.mtl
+
+g Mesh1 Model
+
+usemtl FrontColor
+v 0 16 32
+vt 3.41548e-15 21.4663
+vn 1.90931e-16 0.894427 0.447214
+v 21 32 0
+vt -21 -14.3108
+v 5 32 0
+vt -5 -14.3108
+f 1/1/1 2/2/1 3/3/1
+
+v 26 16 32
+vt -26 21.4663
+f 2/2/1 1/1/1 4/4/1
+
+
+
+</textarea>
+<button onclick="buildVertexBuffer($('input').value);">PARSE NOW --&gt;</button>
+<textarea id="output" cols="40" rows="25"></textarea>
+<script>
+/**
+ * @fileoverview This developer tool converts an OBJ file of the zelda
+ *     overworld and turns it into a blob of bufferData suitable for
+ *     rendering in WebGL using the Zelda30Tribute engine. The OBJ file
+ *     needs to be exported from SketchUp. You can find the SketchUp
+ *     file that was originally used inside
+ *     /sourceFiles/imagesAndSuch/lozOverworldBroad_v4_su8.skp
+ *
+ *     Now that this has been run, it shouldn't need to be run again,
+ *     unless you want to change the original SketchUp overworld and
+ *     re-export. But frankly, that was so long ago I'm not even sure
+ *     if there would be code changes necessary to show a different
+ *     overworld.
+ *
+ *     The output you see on the screen needs to be copy/pasted to
+ *     replace the buffer data in the file www/js/overworldbuffer.js
+ */
+function $(id) { return document.getElementById(id); }
+
+
+function buildVertexBuffer(obj) {
+  var str = [];
+  str.push('ace.overWorldBufferData_ = new Float32Array([');
+  var lines = obj.split("\n");
+  var positions = [];
+  var normals = [];
+  var vertices_ = [];
+  for (var i = 0; i < lines.length; i++) {
+    var line = lines[i];
+
+    if (line.indexOf('v ') == 0) {
+
+      var parts = line.split(' ');
+      parts.shift();
+      positions.push(parts.join(','));
+
+    } else if (line.indexOf('vn ') == 0) {
+
+      var parts = line.split(' ');
+      parts.shift();
+      normals.push(parts.join(','));
+
+    } else if (line.indexOf('f ') == 0) {
+       
+      var parts = line.split(/[ \/]/);
+      var pi1 = parseInt(parts[1]) - 1;
+      var pi2 = parseInt(parts[4]) - 1;
+      var pi3 = parseInt(parts[7]) - 1;
+
+      var ni1 = parseInt(parts[3]) - 1;
+      var ni2 = parseInt(parts[6]) - 1;
+      var ni3 = parseInt(parts[9]) - 1;
+
+      var p1 = clean(positions[pi1]);
+      var p2 = clean(positions[pi2]);
+      var p3 = clean(positions[pi3]);
+      var n1 = clean(normals[ni1]);
+      var n2 = clean(normals[ni2]);
+      var n3 = clean(normals[ni3]);
+      
+      str.push(p1, ',', n1, ',', p2, ",");
+      str.push(n2, ',', p3, ',', n3, ",\n");
+    }
+  }
+  str.push(']);');
+  $('output').value = str.join('');
+  
+  document.body.innerHTML += '&lt;-- Now copy/paste this result into' +
+      ' www/js/overworldbuffer.js';
+  
+}
+
+function clean(str) {
+  if (str.indexOf('e-') > -1) {
+    //return '0';
+  }
+  return str;
+}
+
+
+
+
+</script>
+
+</body>
+</html>

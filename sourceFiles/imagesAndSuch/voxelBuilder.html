@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html>
+<body>
+<style>
+body {
+  background: silver;
+}
+canvas {
+  border: 1px solid black;
+}
+textarea {
+  font-size: 8px;
+}
+</style>
+<textarea id="output" cols="40" rows="25"></textarea>
+<canvas id="canvas" width="32" height="16" style="width:320px;height:160px"></canvas>
+<script>
+
+function $(id) { return document.getElementById(id); }
+
+function dec2hex(d) {
+
+  var hex = Number(d).toString(16);
+  var padding = 2;
+
+  while (hex.length < padding) {
+    hex = "0" + hex;
+  }
+
+  return hex;
+}
+
+function getPixel(imgData, x, y) {
+  var w = voxelSpriteSize * 2;
+  var index = (y * w + x) * 4;
+  var r = imgData.data[index];
+  var g = imgData.data[index + 1];
+  var b = imgData.data[index + 2];
+  var a = imgData.data[index + 3];
+  var hex = '#' + dec2hex(r) + dec2hex(g) + dec2hex(b) + dec2hex(a);
+  hex = hex.toUpperCase();
+  return { r: r, g: g, b: b, a: a, rgb: r + ',' + g + ',' + b, hex: hex };
+}
+
+function buildVoxel(imgData) {
+
+  // Create a 3-dimensional array to store our pixel data.
+  // As we go, "extrude" the first view through Z. 
+  var voxel = [];
+  for (var x = 0; x < voxelSpriteSize; x++) {
+    voxel[x] = [];
+    for (var y = 0; y < voxelSpriteSize; y++) {
+      voxel[x][y] = [];
+      for (var z = 0; z < voxelSpriteSize; z++) {
+        var p = getPixel(imgData, x, y);
+        voxel[x][y][z] = p.hex;
+      };
+    }
+  }
+
+  // Now go through the 2nd sprite and cut out any transparent overlap.
+  for (var x2 = voxelSpriteSize; x2 < voxelSpriteSize * 2; x2++) {
+    for (var y2 = 0; y2 < voxelSpriteSize; y2++) {
+      var y1 = y2;
+      var z1 = voxelSpriteSize - 1 - (x2 - voxelSpriteSize);
+      var p2 = getPixel(imgData, x2, y2);
+
+      // If the 2nd view has a transparent pixel, cut a transparent channel
+      // all the way through.
+      if (p2.hex == '#00000000') {
+        for (var x1 = 0; x1 < voxelSpriteSize; x1++) {
+          voxel[x1][y1][z1] = '#00000000';
+        }
+      } else {
+
+        // Otherwise, apply the side's pixel color to the first and last
+        // non-transparent pixel in the row.
+        for (var x1 = 0; x1 < voxelSpriteSize; x1++) {
+          var current = voxel[x1][y1][z1];
+          if (current != '#00000000') {
+            voxel[x1][y1][z1] = p2.hex;
+            break;
+          }
+        }
+
+        for (var x1 = voxelSpriteSize - 1; x1 >= 0; x1--) {
+          var current = voxel[x1][y1][z1];
+          if (current != '#00000000') {
+            voxel[x1][y1][z1] = p2.hex;
+            break;
+          }
+        }
+
+      }
+    }
+  }
+
+  outputCsv(voxel);
+};
+
+function outputCsv(voxel) {
+  var str = voxelSpriteSize + ',' + voxelSpriteSize + ',' + voxelSpriteSize + "\n";
+  
+  for (var y = 0; y < voxelSpriteSize; y++) {
+    for (var z = 0; z < voxelSpriteSize; z++) {
+      for (var x = 0; x < voxelSpriteSize; x++) {
+        //var p = getPixel(imgData, x, y);
+        //str += p.hex;
+        str += voxel[x][y][z];
+        if (x == voxelSpriteSize - 1) {
+          str += "\n";
+        } else {
+          str += ",";
+        }
+      }
+    }
+    str += "\n";
+  }
+  $('output').value = str;
+}
+
+
+var ctx = $('canvas').getContext('2d');
+var img = new Image();
+var voxelSpriteSize = 16;
+
+img.onload = function() {
+  ctx.drawImage(img, 0, 0, voxelSpriteSize * 2, voxelSpriteSize);
+  var data = ctx.getImageData(0, 0, voxelSpriteSize * 2, voxelSpriteSize);
+  buildVoxel(data);
+};
+//img.src = 'img/linkVoxel.png';
+//img.src = 'img/blueSoldierVoxel.png';
+img.src = 'voxelSourceImages/turtleVoxel.png';
+
+</script>
+
+</body>
+</html>

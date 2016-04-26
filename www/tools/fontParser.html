@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html>
+<body>
+<style>
+body {
+  background: silver;
+}
+</style>
+<script src="../js/heightmap.js"></script>
+<script src="../js/util/gl-matrix.js"></script>
+
+<img id="font" src="font.png" />
+<script>
+/**
+ * This file is a developer tool. It reads in a .png of the Zelda font and
+ * turns it into a bunch of individual sprite images, then instructs the
+ * browser to download each of the files. (You'll find the results of this
+ * thing in www/img/chars. Yep.
+ *
+ * Now that this has been run, it probably never needs to be run again.
+ */
+function $(id) { return document.getElementById(id); }
+var fontImage = $('font');
+
+function go() {
+  var characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ-.,!\'&.0123456789';
+  for (var i = 0; i < characters.length; i++) {
+    var c = characters.substr(i,1);
+    console.log(c);
+    var row = Math.floor(i / 11);
+    var y = row * 16;
+ 		var col = i - (row * 11);
+ 		var x = col * 16;
+ 		
+ 		var canvas = document.createElement('canvas');
+		canvas.width = 16 * 16;
+		canvas.height = 16;
+		canvas.style.border = '1px solid red';
+		document.body.appendChild(canvas);
+		var ctx = canvas.getContext('2d');
+		ctx.drawImage(fontImage, x, y, 16, 16,
+									8 * 16, 0, 16, 16);
+		
+		var a = document.createElement('a');
+		a.href = 'data:' + canvas.toDataURL();
+		
+		a.download = 'char' + c + '.png';
+		a.innerHTML = a.download;
+		document.body.appendChild(a);
+  }
+	
+	var fileLinks = document.getElementsByTagName('a');
+  for (var i = 0; i < fileLinks.length; i++) {
+    var event = new MouseEvent('click', {
+        'view': window,
+        'bubbles': true,
+        'cancelable': true
+      });
+    console.log(i);
+    fileLinks[i].dispatchEvent(event);
+  }
+
+}
+
+window.onload = go;
+
+</script>
+
+</body>
+</html>

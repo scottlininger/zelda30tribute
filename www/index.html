@@ -1,0 +1,934 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>Zelda 30 Year Tribute</title>
+<link REL="shortcut icon" HREF="img/favicon.gif" TYPE="image/x-icon">
+<link rel="icon" sizes="192x192" href="img/icon-mobile-192.png">
+<link rel="apple-touch-icon" href="img/icon-mobile.png">
+<link rel="apple-touch-icon" sizes="72x72" href="img/icon-mobile.png">
+<link rel="apple-touch-icon" sizes="114x114" href="img/icon-mobile.png">
+<link REL="apple-touch-icon" sizes="144x144" HREF="img/icon-mobile.png">
+<meta name="apple-mobile-web-app-title" content="Zelda Tribute">
+<meta name="application-name" content="Zelda Tribute">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="viewport" content="width=device-width,initial-scale=1.0,minimum-scale=1.0, maximum-scale=1.0,user-scalable=no">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="language" content="en" />
+<meta name="description" content="A fan tribute to the greatest console game of all time, the NES Legend of Zelda.
+This open source project uses WebGL and voxels rendering to create a pixel-perfect replica of the original, all in Javascript."></meta>
+<meta name="keywords" content="Legend of Zelda,Zelda,Tribute,30,Thirty,Voxel,WebGL"></meta>
+<meta property="og:title" content="Zelda 30 Year Tribute" />
+<meta property="og:site_name" content="Zelda 30 Year Tribute" />
+<meta property="og:description" content="A fan tribute to the greatest console game of all time, the NES Legend of Zelda.
+This open source project uses WebGL and voxels rendering to create a pixel-perfect replica of the original, all in Javascript." />
+<meta property="og:url" content="http://zelda30tribute.com" />
+<meta property="og:image" content="http://zelda30tribute.com/img/logo-share.png" />
+
+<script id="vshader" type="x-shader/x-vertex">
+#ifdef GL_ES
+precision highp float;
+#endif
+
+attribute vec3 aPosition;
+attribute vec3 aNormal;
+
+varying vec3 vNormal;
+varying vec3 vPosition;
+varying vec3 vWorldPosition;
+varying float vFrontLightingFactor;
+varying float vBackLightingFactor;
+
+uniform mat4 uOffset;
+uniform mat4 uMVP;
+
+// Vector to the source of the main light.
+uniform vec3 uLightDirection;
+
+void main() {
+  vec3 normal = normalize((uOffset * vec4(aNormal, 0.0)).xyz);
+  vec4 position = uMVP * uOffset * vec4(aPosition, 1.0);
+  vNormal = aNormal;
+  gl_Position = position;
+  vPosition = aPosition;
+  vWorldPosition = vec3(uOffset * vec4(aPosition, 1.0));
+
+  vFrontLightingFactor = -0.2 + acos(dot(uLightDirection, normal)) / 3.0;
+  vec3 backLightDirection = -uLightDirection;
+  vBackLightingFactor = -0.2 + acos(dot(backLightDirection, normal)) / 3.0;
+}
+
+</script>
+<script id="fshader" type="x-shader/x-fragment">
+#ifdef GL_ES
+precision highp float;
+#endif
+varying vec3 vNormal;
+varying vec3 vPosition;
+varying vec3 vWorldPosition;
+varying float vFrontLightingFactor;
+varying float vBackLightingFactor;
+
+float VOXEL_SPRITE_CANVAS_WIDTH = 4096.0;
+float VOXEL_SPRITE_CANVAS_HEIGHT = 2048.0;
+float VOXEL_SPRITE_SIZE = 16.0;
+float VOXEL_SPRITE_PADDING = 1.0;
+float VOXEL_SPRITE_SIZE_WITH_PADDING = VOXEL_SPRITE_SIZE + VOXEL_SPRITE_PADDING;
+float xPixelSize = 1.0 / VOXEL_SPRITE_CANVAS_WIDTH;
+float yPixelSize = 1.0 / VOXEL_SPRITE_CANVAS_HEIGHT;
+float xHalfPixelSize = xPixelSize / 2.0;
+float yHalfPixelSize = yPixelSize / 2.0;
+float xSpritePixelSize = xPixelSize * VOXEL_SPRITE_SIZE_WITH_PADDING;
+float ySpritePixelSize = yPixelSize * VOXEL_SPRITE_SIZE_WITH_PADDING;
+float xSpriteStripWidth = xSpritePixelSize * VOXEL_SPRITE_SIZE_WITH_PADDING;
+float xStripsPerRow = floor(1.0 / xSpriteStripWidth);
+float OVERWORLD_HEIGHT = 1408.0;
+float OVERWORLD_WIDTH = 4096.0;
+
+float dungeonPixelSize = 1.0 / 2048.0;
+
+float LIGHT_MAP_CANVAS_WIDTH = 256.0;
+float LIGHT_MAP_CANVAS_HEIGHT = 256.0;
+float LIGHT_MAP_UV_PER_PIXEL = 1.0 / 512.0;
+float LIGHT_MAP_UV_PER_HALF_PIXEL = 0.5 / 512.0;
+
+uniform sampler2D uSpriteSampler;
+uniform sampler2D uLightSampler;
+uniform sampler2D uDungeonSampler;
+uniform float uSpriteId;
+uniform vec3 uAvatarRoomOrigin;
+uniform float uRenderNegativeColor;
+
+vec2 getSpriteBaseUV(float id) {
+  vec2 uv;
+  float gridY = floor((id + .001) / xStripsPerRow);
+  float gridX = id - (gridY * xStripsPerRow);
+  uv[0] = xSpriteStripWidth * gridX;
+  uv[1] = 1.0 - (ySpritePixelSize * (gridY) + ySpritePixelSize);
+  return uv;
+}
+
+void main() {
+  vec3 pos = vPosition;
+  float lightingFactor = vBackLightingFactor;
+  if (gl_FrontFacing) {
+    pos -= vNormal;
+    lightingFactor = vFrontLightingFactor;
+  }
+
+  if (uSpriteId == -1.0) {
+    
+    
+    
+    if (vWorldPosition.z > -100.0) {
+      float mapX = pos.x;
+      float mapY = pos.y;
+      
+      // Use water if we're off the map.
+      if (vWorldPosition.y < 0.0 || vWorldPosition.x < 0.0 ||
+          vWorldPosition.x > 4096.0 || vWorldPosition.y > 1408.0) {
+        //gl_FragColor = vec4(32.0/255.0, 56.0/255.0, 236.0/255.0, 1.0);
+        mapX = mod(vWorldPosition.x, 16.0) - 32.0;
+        mapY = mod(vWorldPosition.y, 16.0);
+      }
+
+		  float u = mapX * xPixelSize;
+	    float v = mapY * yPixelSize;
+      float dz = (pos.z - floor(pos.z / 16.0) * 16.0);
+      u = u + (vNormal.x * dz) * xPixelSize;
+      v = v + (vNormal.y * dz) * yPixelSize;
+      
+      gl_FragColor = vec4(texture2D(uSpriteSampler, vec2(u, v)).rgb, 1.0);
+    } else {
+      float mapX = vWorldPosition.x;
+      float mapY = vWorldPosition.y;
+      float u = mapX * dungeonPixelSize;
+      float v = mapY * dungeonPixelSize;
+      gl_FragColor = texture2D(uDungeonSampler, vec2(u, v));
+    }
+  } else {
+    float x = pos.x;
+    float y = pos.z;
+    float z = VOXEL_SPRITE_SIZE - pos.y;
+
+    float fx = floor(x + 0.0002);
+    float fy = floor(y + 0.0002);
+    float fz = floor(z + 0.0002);
+
+    vec2 uv = getSpriteBaseUV(uSpriteId);
+    uv[0] += fx * xPixelSize + xHalfPixelSize;
+    uv[0] += fz * xSpritePixelSize;
+    uv[1] += fy * yPixelSize + yHalfPixelSize;
+  
+    gl_FragColor = texture2D(uSpriteSampler, uv);  
+  }
+  
+  if (uRenderNegativeColor > 0.5) {
+    gl_FragColor.rgb = vec3(1.8) - gl_FragColor.bgr;
+  }
+  
+  gl_FragColor.rgb -= vec3(lightingFactor);
+
+
+  if (gl_FragColor.a < .01) {
+    discard;
+  }
+
+	// Overworld hard shadows.
+	float shadowHeight = 9000.0;
+	if (vWorldPosition.z > -100.0) {
+		float u2 = (vWorldPosition.x - 1.1) * xPixelSize;
+		float v2 = (vWorldPosition.y - 1.1) * yPixelSize;
+		float alpha = texture2D(uSpriteSampler, vec2(u2, v2)).a;
+		float alphaQuantized = ceil(alpha * 255.0);
+		shadowHeight = 464.0 - (alphaQuantized * 2.0) - 0.1;
+		if (vWorldPosition.z < shadowHeight && shadowHeight < 463.0) {
+			gl_FragColor.rgb -= vec3(0.3,0.3,0.3);
+			gl_FragColor.r = floor(gl_FragColor.r * 8.0) / 8.0;
+			gl_FragColor.g = floor(gl_FragColor.g * 8.0) / 8.0;
+			gl_FragColor.a = 1.0;
+		}
+	}
+
+  // We apply the lighting map to everything in the underworld, or just the
+  // terrain in the overworld.
+  //if (vWorldPosition.z <= (shadowHeight - 1.0) || vWorldPosition.y < -1000.0) {
+		vec3 gridPos = vWorldPosition;
+		float lightX = vWorldPosition.x - uAvatarRoomOrigin.x;
+		float lightY = vWorldPosition.y - uAvatarRoomOrigin.y;
+		vec2 lightUv = vec2(0.25 + lightX * LIGHT_MAP_UV_PER_PIXEL - LIGHT_MAP_UV_PER_HALF_PIXEL,
+												0.25 + lightY * LIGHT_MAP_UV_PER_PIXEL + LIGHT_MAP_UV_PER_HALF_PIXEL);
+		vec3 color = vec3(texture2D(uLightSampler, lightUv));
+		color = (color - 0.5) * 2.2;
+		gl_FragColor.rgb += color;
+  //}
+}
+
+</script>
+<script src="js/util/gl-matrix.js"></script>
+<script src="js/util/fullscreen.js"></script>
+<script src="js/ace.js"></script>
+<script src="js/game.js"></script>
+<script src="js/util/soundmanager2.js"></script>
+<script src="js/util/soundmanager2_settings.js"></script>
+<script src="js/enginevoxel.js"></script>
+<script src="js/overworldbuffer.js"></script>
+
+<script src="dungeons/room.js"></script>
+<script src="dungeons/dungeon.js"></script>
+<script src="dungeons/dungeon1.js"></script>
+<script src="dungeons/dungeon2.js"></script>
+<script src="dungeons/dungeon3.js"></script>
+<script src="dungeons/dungeon4.js"></script>
+<script src="dungeons/dungeon5.js"></script>
+<script src="dungeons/dungeon6.js"></script>
+<script src="dungeons/dungeon7.js"></script>
+<script src="dungeons/dungeon8.js"></script>
+<script src="dungeons/dungeon9.js"></script>
+<script src="dungeons/overworld.js"></script>
+
+<script src="actors/actor.js"></script>
+<script src="actors/enemy.js"></script>
+<script src="actors/avatar.js"></script>
+<script src="actors/flyingsword.js"></script>
+<script src="actors/hurler.js"></script>
+<script src="actors/hurlerrock.js"></script>
+<script src="actors/hurlertough.js"></script>
+
+<script src="actors/aquamentus.js"></script>
+<script src="actors/archer.js"></script>
+<script src="actors/archerarrow.js"></script>
+<script src="actors/archertough.js"></script>
+<script src="actors/boomerang.js"></script>
+<script src="actors/magicalboomerang.js"></script>
+<script src="actors/bomb.js"></script>
+<script src="actors/boulder.js"></script>
+<script src="actors/bow.js"></script>
+<script src="actors/bubble.js"></script>
+<script src="actors/cave.js"></script>
+<script src="actors/caveexit.js"></script>
+<script src="actors/charger.js"></script>
+<script src="actors/chargersword.js"></script>
+<script src="actors/chargertough.js"></script>
+<script src="actors/cloud.js"></script>
+<script src="actors/compass.js"></script>
+<script src="actors/darknut.js"></script>
+<script src="actors/digger.js"></script>
+<script src="actors/diggerblue.js"></script>
+<script src="actors/dodongo.js"></script>
+<script src="actors/fire.js"></script>
+<script src="actors/fireball.js"></script>
+<script src="actors/flyingboomerang.js"></script>
+<script src="actors/gel.js"></script>
+<script src="actors/ghost.js"></script>
+<script src="actors/goriya.js"></script>
+<script src="actors/goriyablue.js"></script>
+<script src="actors/jumper.js"></script>
+<script src="actors/jumpertough.js"></script>
+<script src="actors/keese.js"></script>
+<script src="actors/key.js"></script>
+<script src="actors/kraken.js"></script>
+<script src="actors/lakefairy.js"></script>
+<script src="actors/lakesand.js"></script>
+<script src="actors/lockeddoor.js"></script>
+<script src="actors/manhandla.js"></script>
+<script src="actors/manhandlalimb.js"></script>
+<script src="actors/map.js"></script>
+<script src="actors/moldorm.js"></script>
+<script src="actors/obstacle.js"></script>
+<script src="actors/oldman.js"></script>
+<script src="actors/peahat.js"></script>
+<script src="actors/pushableblock.js"></script>
+<script src="actors/raft.js"></script>
+<script src="actors/raftlaunch.js"></script>
+<script src="actors/roomdarkener.js"></script>
+<script src="actors/rope.js"></script>
+<script src="actors/secretbomb.js"></script>
+<script src="actors/secretheartcontainer.js"></script>
+<script src="actors/secretkey.js"></script>
+<script src="actors/secretrupee.js"></script>
+<script src="actors/stalfos.js"></script>
+<script src="actors/stairs.js"></script>
+<script src="actors/startscreen.js"></script>
+<script src="actors/statue.js"></script>
+<script src="actors/text.js"></script>
+<script src="actors/trap.js"></script>
+<script src="actors/treasure.js"></script>
+<script src="actors/triforcepiece.js"></script>
+<script src="actors/wallmaster.js"></script>
+<script src="actors/water.js"></script>
+<script src="actors/whitebrickroom.js"></script>
+<script src="actors/zol.js"></script>
+
+<script src="actors/barreddoor.js"></script>
+<script src="actors/block.js"></script>
+<script src="actors/bombhole.js"></script>
+
+<link rel='stylesheet' type='text/css' href='//fonts.googleapis.com/css?family=Press+Start+2P'>
+
+<script src="js/heightmap.js"></script>
+
+</head>
+<body>
+<div id="progress"></div>
+
+
+<div id="intro-panel" class="hidden">
+<div id="intro-text">
+<div class="vines">
+<h1>A ZELDA TRIBUTE</h1>
+
+<pre>
+THIRTY YEARS AGO TINY CHILD
+<b>"&nbsp;SCOTT&nbsp;"</b>  PLAYED THE GREAT
+<i>GOLDEN CARTRIDGE</i> WITH LOVE.
+LATER LORDS OF <b>BROWSER</b> MADE
+THE WEBGLS WITH WISDOM. NOW
+ALLOW  <i>VOXELS</i>  ABLE  ON THE
+WEBS! SOON <b>"&nbsp;MIKE&nbsp;"</b> HELP TO
+REMAKE  GOLDEN CARTRIDGE IN
+<i>"&nbsp;3D&nbsp;"</i> AS FANS FICTION!    </pre><pre>
+ <b>GO FIND THE "&nbsp;8&nbsp;" UNITS
+  <em>" LINK "</em> TO BE NOSTALGIA!</b></pre>
+</div>
+
+<div id="vines-hline-id" class="vines-hline">
+  <h1>ALL OF CREDITS</h1>
+</div>
+
+<center>
+<h2>CODING+UI</h2>
+SCOTT LININGER
+
+<h2>VOXEL MODELING</h2>
+MIKE MAGEE
+
+<h2>GAME+SOUND+ART+MUSIC+
+<br>MEMORIES+MAGIC</h2>
+NINTENDO 
+
+<p><h2>CONTACT US</h2>
+<a href="https://twitter.com/zelda30tribute" target="_blank"><em>twitter.com/zelda30tribute</em></a>
+<br><a href="https://facebook.com/zelda30tribute" target="_blank"><em>facebook.com/zelda30tribute</em></a>
+
+
+<p>&nbsp;
+<p>&nbsp;
+<p>&nbsp;
+<p>&nbsp;
+
+
+<img src="img/link-with-sign.png" alt="Legend of Zelda with Voxels"
+     ontouchstart="game.showOptions()" onclick="game.showOptions()">
+</center>    
+</div>
+</div>
+
+<div id="game-over-wrapper" class="hidden">
+  <div id="game-over-panel">
+    <div class="menu-link" onclick="game.continue()" ontouchstart="game.continue()">CONTINUE</div>
+    <div class="menu-link" onclick="game.save()" ontouchstart="game.save()">SAVE</div>
+    <div class="menu-link" onclick="game.reset()" ontouchstart="game.reset()">RESET</div>
+    
+    <div class="vines-hline">
+    <h3>About</h3>
+    </div>
+    <p>This site is a fan tribute to the greatest console game of all time.
+    It was built by <a href="https://twitter.com/scottlininger" target="_blank">Scott</a>, a
+    Colorado dad who works at
+    <a href="https://bitsbox.com" target="_blank">Bitsbox</a> <a href="https://bitsbox.com" target="_blank" style="color:white;text-decoration:none">teaching
+    kids to code</a>, and <a href="https://www.facebook.com/profile.php?id=100007287228430" target="_blank">Mike</a>, an independent mobile game developer and retro game enthusiast.
+
+    <!-- Begin MailChimp Signup Form -->
+   
+      <div class="vines-hline">
+      <h3>Stay in the Loop!</h3>
+      </div>
+      <P>Join our mail list or follow us on <a href="https://twitter.com/zelda30tribute" target="_blank">twitter</a> or <a href="https://facebook.com/zelda30tribute" target="_blank">facebook</a>.
+    
+    <p><iframe src="about.html" width="400" height="100" frameborder="0"
+      scrolling="no"
+      marginheight="0"
+      marginwidth="0">
+      <p>Your browser does not support iframes.</p>
+    </iframe>
+
+
+  </div>
+</div>
+
+<style>
+* { box-sizing: border-box; }
+a {
+  color: #33cc33;
+}
+#intro-panel {
+  background: black;
+  text-align: center;
+  position: fixed;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  transition: opacity 4s;
+  background: black;
+  z-index: 950;			
+}
+#intro-text {
+  font-family: 'Press Start 2P', monospace;
+  color: white;
+  font-size: 12px;
+  line-height: 30px;
+  font-weight: normal;
+  letter-spacing: 2px;
+  padding-bottom: 250px;
+  text-align: center;
+  padding-top: 700px;
+  padding-bottom: 1200px;
+  width: 100%;
+  max-width: 460px;
+  margin: auto;
+}
+#intro-panel.hidden {
+  opacity: 0;
+}
+#intro-panel.visible {
+  opacity: 1;
+}
+
+#intro-text .vines {
+  background-image: url(img/intro-text.gif);
+  background-size: 464px 400px;
+  background-position: top center;
+  background-repeat: no-repeat;
+}
+#intro-text .vines:after {
+  content: " ";
+  display: block;
+  position: relative;
+  width: 100%;
+  height: 24px;
+  max-width: 460px;
+  background-image: url(img/intro-text-after.gif);
+  background-size: 464px 24px;
+  background-position: bottom center;
+  background-repeat: no-repeat;
+}
+.vines-hline {
+  background-image: url(img/intro-text.gif);
+  background-size: 464px 400px;
+  background-position: top center;
+  background-repeat: no-repeat;
+  height: 24px;
+  overflow: hidden;
+  width: 100%;
+  max-width: 400px;
+  margin: auto;
+  margin-top: 100px;
+  text-align: center;
+}
+#intro-text b {
+  font-weight: normal;
+  color: red;
+}
+#intro-text i {
+  font-weight: normal;
+  font-style: normal;
+  color: cyan;
+}
+#intro-text em {
+  font-weight: normal;
+  font-style: normal;
+  color: lime;
+}
+#intro-text h1 {
+	font-size: 13px;
+	letter-spacing: 2px;
+	color: red;
+	text-align: center;
+	margin-top: 0;
+	display: inline-block;
+	width: auto;
+	background: black;
+	margin: auto;
+	padding: 0 10px;
+}
+#intro-text h2 {
+  font-size: 12px;
+  letter-spacing: 2px;
+  color: cyan;
+  text-align: center;
+  margin-bottom: 0;
+  margin-top: 40px;
+}
+#intro-text pre {
+  margin: auto;
+  font-family: 'Press Start 2P', monospace;
+  font-size: 12px;
+  letter-spacing: 2px;
+}
+
+@media screen and (max-width: 460px) {
+  #intro-text pre {
+    white-space: normal;
+    padding: 0 40px;
+    width: 100%;
+    text-align: justify;
+  }
+}
+
+body {
+  font-family: 'Press Start 2P';
+  transition: background-color 1s;
+  background-color: black;
+  overflow: hidden;
+  user-select: none;
+  -moz-user-select: none;
+  -webkit-user-select: none;
+  -ms-user-select: none;
+  margin: 0;
+  padding: 0;
+}
+canvas {
+  display: none;
+}
+
+#game-canvas {
+  position: fixed;
+  left: 0;
+  top: 0;
+  /* image-rendering: pixelated; */
+  background: #f4c6bc;
+  transition: margin-top 1s;
+}
+#game-canvas.paused {
+  margin-top: 340px;
+}
+#game-container {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 100%;
+  height: 100%;
+  background-position: center center;
+  background-repeat: no-repeat;
+  transition: opacity 2s;
+  z-index: 10;
+}
+#game-container.hidden {
+  opacity: 0;
+}
+#game-container.visible {
+  opacity: 1;
+}
+#runner-info-panel {
+  color: white;
+  padding-left: 190px;
+  padding-top: 376px;
+  font-size: 16px;
+  position: relative;
+  z-index: 30;
+}
+#hud-settings-panel {
+  color: #b75635;
+  left: 238px;
+  top: 200px;
+  width: 160px;
+  font-size: 10px;
+  position: absolute;
+  z-index: 900;
+  text-align: center;
+  text-transform: uppercase;
+  line-height: 20px;
+}
+#hud-panel {
+  width: 456px;
+  height: 456px;
+  position: fixed;
+  /*top: 100%;*/
+  margin-top: -458px;
+  top: 0;
+  left: 50%;
+  margin-left: -228px;
+  z-index: 900;
+  transition: opacity 1s, margin-top 1s;
+  image-rendering: pixelated;
+}
+#hud-canvas {
+  display: block;
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 456px;
+  height: 456px;
+  image-rendering: pixelated;
+}
+#hud-panel.hidden {
+  opacity: 0;
+}
+#hud-panel.visible {
+  opacity: 1;
+}
+#hud-panel.paused {
+  opacity: 1;
+  margin-top: -120px;
+}
+
+#hud-hearts {
+  width: 48px;
+  height: 16px;
+  position: absolute;
+  top: 426px;
+  left: 334px;
+  padding: 0;
+  margin; 0;
+  background-image: url(img/hud-heart.png);
+  background-size: 16px 16px;
+  background-repeat: repeat-x;
+  z-index: 20;
+}
+#hud-max-hit-points {
+  width: 48px;
+  height: 16px;
+  position: absolute;
+  top: 426px;
+  left: 334px;
+  background-image: url(img/hud-max-hit-points.png);
+  z-index: 10;
+}
+#hud-room {
+  position: absolute;
+  left: 72px;
+  top: 436px;
+  width: 6px;
+  height: 6px;
+  background-color: #a3bf4e;
+}
+#instructions-panel {
+  color: white;
+  font-size: 8px;
+  text-align: center;
+  top: 100%;
+  left: 0;
+  width: 100%;
+  margin-top: -20px;
+  position: fixed;
+}
+#canvas-light-map {
+  position: absolute;
+  top: 0;
+  left: 0;
+  z-index: 5000;
+  display: none;
+  width: 256px;
+  height: 256px;
+}
+#dpad-panel {
+  position: fixed;
+  z-index: 1000;
+  width: 250px;
+  height: 250px;
+  top: 100%;
+  left: 0;
+  margin-left: -50px;
+  background-image: url(img/controller2.png);
+  background-size: 860px 250px;
+  
+  -webkit-perspective: 150px;
+		 -moz-perspective: 150px;
+			 -o-perspective: 150px;
+					perspective: 150px;
+  perspective-origin: 50% 40%;
+              
+  padding-top: 25px;
+	padding-left: 50px;
+	
+	  user-select: none;
+  -moz-user-select: none;
+  -webkit-user-select: none;
+  -ms-user-select: none;
+  transition: margin-top 2s;
+}
+#dpad-panel.hidden {
+  margin-top: 10px;
+}
+#dpad-panel.visible {
+  margin-top: -170px;
+}
+#dpad {
+	position: absolute;
+	width: 95px;
+	height: 95px;
+	top: 52px;
+	left: 77px;
+	/* border: 1px solid red; */
+	cursor: pointer;
+	background-size: 95px 95px;
+	background-image: url(img/dpad.png);
+	-webkit-transform-style: preserve-3d;
+		 -moz-transform-style: preserve-3d;
+			 -o-transform-style: preserve-3d;
+					transform-style: preserve-3d;
+}
+#button-panel {
+  position: fixed;
+  z-index: 1000;
+  width: 250px;
+  height: 250px;
+  top: 100%;
+  right: 0;
+  margin-right: -35px;
+  background-image: url(img/controller2.png);
+  background-position: 250px 0px;
+  background-size: 860px 250px;
+  transition: margin-top 2s;
+}
+#button-panel.hidden {
+  margin-top: 10px;
+}
+#button-panel.visible {
+  margin-top: -170px;
+}
+#button-start {
+  position: absolute;
+  width: 60px;
+  height: 40px;
+  top: 15px;
+  left: 110px;
+  /* border: 1px solid red; */
+	cursor: pointer;
+	background-position: 451px -15px;
+	background-size: 860px 250px;
+}
+#button-b {
+	position: absolute;
+	width: 65px;
+	height: 80px;
+	top: 75px;
+	left: 75px;
+	/* border: 1px solid red; */
+	cursor: pointer;
+	background-position: 486px -75px;
+	background-size: 860px 250px;
+	/* background-image: url(img/controller2.png); */
+}
+#button-a {
+  position: absolute;
+	width: 65px;
+	height: 80px;
+	top: 75px;
+	left: 140px;
+	/* border: 1px solid red; */
+	cursor: pointer;
+	background-position: 421px -75px;
+	background-size: 860px 250px;
+	/* background-image: url(img/controller2.png); */
+}
+#button-start.pressed, #button-b.pressed, #button-a.pressed {
+  background-image: url(img/controller2.png);
+}
+
+#dpad-panel span {
+  display: inline-block;
+  width: 50px;
+  height: 50px;
+  position: relative;
+  cursor: pointer;
+  /* border: 1px solid red; */
+}
+
+#dpad-panel span#dpad-l { width: 60px; }
+#dpad-panel span#dpad-r { width: 60px; }
+#dpad-panel span#dpad-m { width: 30px; }
+#dpad-panel span#dpad-u { height: 60px; margin-bottom: -10px; }
+#dpad-panel span#dpad-d { height: 60px; margin-top: -10px; }
+
+#progress {
+  position: absolute;
+  top: 50%;
+  margin-top: -10px;
+  width: 100%;
+  text-align: center;
+  color: white;
+}
+#game-over-panel {
+  margin: auto;
+  background: black;
+  max-width: 400px;
+  color: white;
+  z-index: 5000;
+  font-size: 12px;
+  line-height: 16px;
+  text-transform: uppercase;
+  text-align: left;
+  padding-top: 50px;
+}
+#game-over-panel p, #game-over-panel .mc-field-group {
+  padding: 0 12px;
+}
+#game-over-panel h3 {
+  font-size: 13px;
+	letter-spacing: 2px;
+	color: red;
+	text-align: center;
+	margin-top: 0;
+	display: inline-block;
+	width: auto;
+	background: black;
+	margin: auto;
+	padding: 0 10px;
+	border-top: 7px solid black;
+}
+#game-over-panel .vines-hline {
+  margin-top: 12px;
+}
+
+#game-over-wrapper {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: black;
+  transition: opacity 1s;
+  z-index: 9;
+  text-align: center;
+}
+#game-over-wrapper.hidden {
+  opacity: 0;
+}
+#game-over-wrapper.visible {
+  opacity: 1;
+}
+
+.menu-link { 
+  background-image: none;
+  background-size: 16px 16px;
+  background-position: center left;
+  background-repeat: no-repeat;
+  padding-left: 30px;
+  font-size: 15px;
+  color: white;
+  font-weight: normal;
+  line-height: 60px;
+  letter-spacing: 1px;
+  cursor: pointer;
+}
+.menu-link:hover { 
+  background-image: url(img/hud-heart.png);
+}
+</style>
+<div id="dpad-panel" class="hidden">
+  <div id="dpad" class="r"></div>
+  <span id="dpad-ul"></span><span id="dpad-u"></span><span id="dpad-ur"></span><br/>
+  <span id="dpad-l"></span><span id="dpad-m"></span><span id="dpad-r"></span><br/>
+  <span id="dpad-dl"></span><span id="dpad-d"></span><span id="dpad-dr"></span>
+</div>
+<div id="button-panel" class="hidden">
+  <div id="button-start"></div>
+  <div id="button-b"></div>
+  <div id="button-a"></div>
+</div>
+
+
+<div id="hud-panel" class="hidden">
+  <canvas id="hud-canvas" width="456" height="456"></canvas>
+  <div id="hud-max-hit-points"></div>
+  <div id="hud-hearts"></div>
+  <div id="hud-room"></div>
+  <div id="hud-settings-panel">Thanks for playing! Please report bugs and stuff to:
+  <a href="https://facebook.com/zelda30tribute" target="_blank">@zelda30tribute</a>
+  <br>-Scott and Mike</div>
+  <div id="runner-info-panel">0<br/><br/>0<br/>0</div>
+</div>
+<div id="game-container" class="hidden"></div>
+<img id="level9" src="img/level9.png" style="display: none">
+<img id="level1" src="dungeons/dungeon1.png" style="display: none">
+<img id="level2" src="dungeons/dungeon2.png" style="display: none">
+<img id="lightmap" src="img/lightmap.png" style="display: none">
+<img id="light-lantern" src="img/light-lantern.png" style="display: none">
+<img id="light-red" src="img/light-red.png" style="display: none">
+<img id="light-black" src="img/light-black.png" style="display: none">
+<img id="shadow-round" src="img/shadow-round.png" style="display: none">
+<img id="light-fire" src="img/light-fire.png" style="display: none">
+<img id="shadow-obstacle" src="img/shadow-obstacle.png" style="display: none">
+<img id="light-star" src="img/light-star.png" style="display: none">
+<img id="hud-image" src="img/hud-panel.png" style="display: none">
+<img id="hud-image-underworld" src="img/hud-panel-underworld.png" style="display: none">
+<img id="hud-panel-selector" src="img/hud-panel-selector.png" style="display: none">
+
+
+<script>
+/* UNCOMMENT TO TEST MOBILE
+window.onerror = function(e) {
+  alert(e);
+}
+*/
+var game;
+var assetsReady = false;
+
+window.onload = function() {
+  assetsReady = true;
+}
+
+function init() {
+  if (!assetsReady) {
+    window.setTimeout(init, 250);
+  }
+}
+
+</script>
+<script src="js/preload.js"></script>
+
+
+<script>
+  (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+  (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+  m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+  })(window,document,'script','//www.google-analytics.com/analytics.js','ga');
+
+  ga('create', 'UA-76008504-1', 'auto');
+  ga('send', 'pageview');
+
+</script>
+</body>
+</html>
