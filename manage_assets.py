@@ -3,6 +3,7 @@
 import shutil
 import os
 import os.path
+from os.path import abspath
 import errno
 import urllib
 import urllib2
@@ -735,13 +736,13 @@ def files_missing(rootdir):
 
 
 def print_missing_files(missing):
-    fullpaths = {os.path.abspath(path) for path in missing}
+    fullpaths = {abspath(path) for path in missing}
     print("Files missing:\n{}".format("\n".join(fullpaths)))
 
 
 def move_assets(from_rootdir, to_rootdir):
-    print('Moving assets: {} -> {}...'.format(os.path.abspath(from_rootdir),
-                                              os.path.abspath(to_rootdir)))
+    print('Moving assets: {} -> {}...'.format(abspath(from_rootdir),
+                                              abspath(to_rootdir)))
     for asset in assets:
         srcpath = os.path.join(from_rootdir, asset)
         dstpath = os.path.join(to_rootdir, asset)
@@ -799,11 +800,11 @@ if __name__ == '__main__':
             print_missing_files(files_missing_in_root_dir)
             print_missing_files(files_missing_in_asset_dir)
         else:
-            msg = 'All assets are currently stored in "{}".'
+            msg = 'All assets are currently stored in {}.'
             if not files_missing_in_asset_dir:
-                print(msg.format(asset_dir))
+                print(msg.format(abspath(asset_dir)))
             if not files_missing_in_root_dir:
-                print(msg.format(root_dir))
+                print(msg.format(abspath(root_dir)))
     elif args.operation == "download":
         if not files_missing_in_asset_dir:
             print("The files are already downloaded and stored in {}"
