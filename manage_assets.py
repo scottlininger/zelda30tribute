@@ -809,4 +809,8 @@ if __name__ == '__main__':
             print("The files are already downloaded and stored in {}"
                   .format(asset_dir))
         else:
-            download_assets(asset_dir)
+            if mirrors:
+                download_assets(asset_dir)
+            else:
+                print("There are no sites to download from. Please add an URL "
+                      "to the list of mirrors.")
