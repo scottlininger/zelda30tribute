@@ -802,6 +802,12 @@ def unzip(zippath, outdir):
         print("Replacing top folder: {} -> {}".format(srcpath, dstpath))
         topfiles = os.listdir(srcpath)
         for topfile in topfiles:
+            # Remove if it happens to already be there:
+            try:
+                shutil.rmtree(joinpaths(dstpath, topfile))
+            except OSError as e:
+                if e.errno != errno.ENOENT:
+                    raise
             shutil.move(joinpaths(srcpath, topfile), dstpath)
         shutil.rmtree(srcpath)
 
