@@ -761,6 +761,14 @@ def url_is_retrievable(url):
         return False
 
 
+def download_reporthook(count, blocksize, filesize):
+    filesizestr = ""
+    if filesize != -1:
+        filesizestr = "/{}".format(filesize/blocksize)
+    print("Retrieving block {}{}, block size {}".format(count, filesizestr,
+                                                        blocksize))
+
+
 def download_from_url(mirror, to_rootdir, zipfile=False):
     print("Checking to see if site is up...")
     if not url_is_retrievable(mirror):
@@ -768,7 +776,8 @@ def download_from_url(mirror, to_rootdir, zipfile=False):
     print("Site is up. Downloading assets...")
     if zipfile:
         zipfilename = "zelda30tribute.zip"
-        urllib.urlretrieve(mirror, filename=zipfilename)
+        urllib.urlretrieve(mirror, filename=zipfilename,
+                           reporthook=download_reporthook)
         print("Unzipping {} -> {}".format(zipfilename, to_rootdir))
         unzip(zipfilename, to_rootdir)
     else:
