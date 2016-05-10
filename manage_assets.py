@@ -740,6 +740,11 @@ assets = {
 }
 
 
+def commondir(paths):
+    (folder, sep, tail) = os.path.commonprefix(paths).rpartition('/')
+    return folder
+
+
 def parse_hashfile(hashfile):
     hashes = dict()
     with open(hashfile, 'r') as f:
@@ -767,15 +772,30 @@ def check_file_integrity(folder, verbose=False):
 
 
 def unzip(zippath, outdir):
+    """
+    Unzip the contents of zippath to outdir. Example:
+    unzip("zelda30tribute.zip", "./assets")
+    """
     f = open(zippath, 'rb')
     z = ZipFile(f)
+    ziprootdir = commondir(z.namelist())
     fileno = 0
     for asset in assets:
         fileno += 1
         outpath = os.path.join(outdir, asset)
+        inpath = os.path.join(ziprootdir, asset)
         print("Extracting ({}/{}): {} -> {}"
-              .format(fileno, len(assets), asset, outpath))
-        z.extract(asset, outdir)
+              .format(fileno, len(assets), inpath, outpath))
+        z.extract(inpath, outdir)
+    if ziprootdir:
+        # If the assets are stored within a top folder:
+        srcpath = os.path.join(asset_dir, ziprootdir)
+        dstpath = asset_dir
+        print("Replacing top folder: {} -> {}".format(srcpath, dstpath))
+        topfiles = os.listdir(srcpath)
+        for topfile in topfiles:
+            shutil.move(os.path.join(srcpath, topfile), dstpath)
+        shutil.rmtree(srcpath)
 
 
 def url_is_retrievable(url):
@@ -863,7 +883,7 @@ def print_missing_files(missing):
     allmissing = all(any(m.endswith(asset) for asset in assets)
                      for m in missing)
     if allmissing:
-        parentdir = os.path.dirname(os.path.commonprefix(missing))
+        parentdir = commondir(missing)
         print("All assets are missing in directory: {}".format(parentdir))
         return
     fullpaths = {abspath(path) for path in missing}
