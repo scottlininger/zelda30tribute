@@ -9,6 +9,7 @@ import urllib
 import urllib2
 import argparse
 from zipfile import ZipFile
+from hashlib import md5
 
 # URLs of sites from where these assets can be downloaded
 mirrors = {
@@ -738,6 +739,31 @@ assets = {
 }
 
 
+def parse_hashfile(hashfile):
+    hashes = dict()
+    with open(hashfile, 'r') as f:
+        lines = f.readlines()
+        for line in lines:
+            (hashstr, path) = line.split(None, 1)
+            hashstr = hashstr.strip()
+            path = path.strip()
+            hashes[path] = hashstr
+    return hashes
+
+
+def check_file_integrity(folder, verbose=False):
+    assetpaths = {os.path.join(folder, p) for p in assets}
+    expectedhashes = parse_hashfile('{}.md5'.format(folder))
+    for path in assetpaths:
+        with open(path, 'rb') as f:
+            filehash = md5(f.read()).hexdigest()
+            expected = expectedhashes[path]
+            errormsg = "Hashes not equal for file: {}".format(path)
+            assert filehash == expected, errormsg
+            if verbose:
+                print("{}: OK".format(path))
+    print("All md5 checks passed.")
+
 
 def unzip(zippath, outdir):
     f = open(zippath, 'rb')
@@ -860,7 +886,8 @@ if __name__ == '__main__':
                         choices=[
                             'unpack',  # Move asset dir -> root dir
                             'pack',  # Move root dir -> asset dir
-                            'check',  # Check integrity/existence of assets
+                            'check',  # Check existence of assets
+                            'verify',  # Check file integrity of assets
                             'unzip',  # Unzip a zip file to asset dir
                             'download',  # Download assets from external site
                         ],
@@ -898,6 +925,11 @@ if __name__ == '__main__':
                 print(msg.format(abspath(asset_dir)))
             if not files_missing_in_root_dir:
                 print(msg.format(abspath(root_dir)))
+    elif args.operation == "verify":
+        if files_missing_in_asset_dir:
+            print("There are files missing in the asset directory. Skipping.")
+        else:
+            check_file_integrity(asset_dir, verbose=True)
     elif args.operation == "unzip":
         if not files_missing_in_asset_dir:
             print("The files are already stored in {}" .format(asset_dir))
@@ -912,6 +944,7 @@ if __name__ == '__main__':
         else:
             if mirrors['zip'] or mirrors['plain']:
                 download_assets(asset_dir)
+                check_file_integrity(asset_dir)
             else:
                 print("There are no sites to download from. Please add an URL "
                       "to the list of mirrors.")
