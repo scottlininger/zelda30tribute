@@ -742,8 +742,7 @@ assets = {
 
 def joinpaths(*paths):
     """ Because screw backslashes. """
-    frontslashedpaths = [p.replace("\\", "/") for p in paths]
-    return os.path.join(*frontslashedpaths)
+    return os.path.join(*paths).replace("\\", "/")
 
 
 def commondir(paths):
