@@ -725,7 +725,7 @@ def unzip(zippath, outdir):
 
 def url_is_retrievable(url):
     try:
-        urllib.urlopen(url)
+        urllib2.urlopen(url, timeout=10)
         return True
     except urllib2.HTTPError:
         return False
