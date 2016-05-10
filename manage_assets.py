@@ -819,7 +819,9 @@ def download_reporthook(count, blocksize, filesize):
 def download_from_url(mirror, to_rootdir, zipfile=False):
     print("Checking to see if site is up...")
     any_asset_url = os.path.join(mirror, next(iter(assets)))
-    if not url_is_retrievable(any_asset_url):
+    if zipfile and not url_is_retrievable(mirror):
+        return
+    elif not zipfile and not url_is_retrievable(any_asset_url):
         return
     print("Site is up. Downloading assets...")
     if zipfile:
