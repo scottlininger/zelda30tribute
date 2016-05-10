@@ -10,6 +10,7 @@ import urllib2
 import argparse
 from zipfile import ZipFile
 from hashlib import md5
+from random import shuffle
 
 # URLs of sites from where these assets can be downloaded
 mirrors = {
@@ -819,7 +820,10 @@ def download_from_url(mirror, to_rootdir, zipfile=False):
 
 
 def download_assets(to_rootdir):
-    for mirror in mirrors['zip']:
+    # Shuffle the mirrors for load balancing:
+    shuffled_zip_mirrors = mirrors['zip']
+    shuffle(shuffled_zip_mirrors)
+    for mirror in shuffled_zip_mirrors:
         print("Attempting to download zip file from mirror: {}".format(mirror))
         download_from_url(mirror, to_rootdir, zipfile=True)
         if not files_missing(to_rootdir):
