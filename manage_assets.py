@@ -740,6 +740,12 @@ assets = {
 }
 
 
+def joinpaths(*paths):
+    """ Because screw backslashes. """
+    frontslashedpaths = [p.replace("\\", "/") for p in paths]
+    return os.path.join(*frontslashedpaths)
+
+
 def commondir(paths):
     (folder, sep, tail) = os.path.commonprefix(paths).rpartition('/')
     return folder
@@ -758,7 +764,7 @@ def parse_hashfile(hashfile):
 
 
 def check_file_integrity(folder, verbose=False):
-    assetpaths = {os.path.join(folder, p) for p in assets}
+    assetpaths = {joinpaths(folder, p) for p in assets}
     expectedhashes = parse_hashfile('{}.md5'.format(folder))
     for path in assetpaths:
         with open(path, 'rb') as f:
@@ -782,19 +788,19 @@ def unzip(zippath, outdir):
     fileno = 0
     for asset in assets:
         fileno += 1
-        outpath = os.path.join(outdir, asset)
-        inpath = os.path.join(ziprootdir, asset)
+        outpath = joinpaths(outdir, asset)
+        inpath = joinpaths(ziprootdir, asset)
         print("Extracting ({}/{}): {} -> {}"
               .format(fileno, len(assets), inpath, outpath))
         z.extract(inpath, outdir)
     if ziprootdir:
         # If the assets are stored within a top folder:
-        srcpath = os.path.join(asset_dir, ziprootdir)
+        srcpath = joinpaths(asset_dir, ziprootdir)
         dstpath = asset_dir
         print("Replacing top folder: {} -> {}".format(srcpath, dstpath))
         topfiles = os.listdir(srcpath)
         for topfile in topfiles:
-            shutil.move(os.path.join(srcpath, topfile), dstpath)
+            shutil.move(joinpaths(srcpath, topfile), dstpath)
         shutil.rmtree(srcpath)
 
 
@@ -818,7 +824,7 @@ def download_reporthook(count, blocksize, filesize):
 
 def download_from_url(mirror, to_rootdir, zipfile=False):
     print("Checking to see if site is up...")
-    any_asset_url = os.path.join(mirror, next(iter(assets)))
+    any_asset_url = joinpaths(mirror, next(iter(assets)))
     if zipfile and not url_is_retrievable(mirror):
         return
     elif not zipfile and not url_is_retrievable(any_asset_url):
@@ -834,8 +840,8 @@ def download_from_url(mirror, to_rootdir, zipfile=False):
         fileno = 0
         for asset in assets:
             fileno += 1
-            asseturl = os.path.join(mirror, asset)
-            dstpath = os.path.join(to_rootdir, asset)
+            asseturl = joinpaths(mirror, asset)
+            dstpath = joinpaths(to_rootdir, asset)
             print("Downloading asset ({}/{}): {} -> {}"
                   .format(fileno, len(assets), asseturl, dstpath))
             makedirs(dstpath)
@@ -875,7 +881,7 @@ def makedirs(path):
 def files_missing(rootdir):
     missing = set()
     for asset in assets:
-        path = os.path.join(rootdir, asset)
+        path = joinpaths(rootdir, asset)
         if not os.path.isfile(path):
             missing.add(path)
     return missing
@@ -896,8 +902,8 @@ def move_assets(from_rootdir, to_rootdir):
     print('Moving assets: {} -> {}...'.format(abspath(from_rootdir),
                                               abspath(to_rootdir)))
     for asset in assets:
-        srcpath = os.path.join(from_rootdir, asset)
-        dstpath = os.path.join(to_rootdir, asset)
+        srcpath = joinpaths(from_rootdir, asset)
+        dstpath = joinpaths(to_rootdir, asset)
         makedirs(dstpath)
         print('Moving asset: {} -> {}...'.format(srcpath, dstpath))
         shutil.move(srcpath, dstpath)
