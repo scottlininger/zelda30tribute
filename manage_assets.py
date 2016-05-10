@@ -16,8 +16,7 @@ from random import shuffle
 mirrors = {
     # URLs to zip files
     'zip': [
-        "https://www.dropbox.com/sh"
-        "/3hcoezbmfbajo06/AAC4LzV7E2BmYm-l9qGi5jo9a?dl=1",
+        "https://dl.dropboxusercontent.com/u/25419734/zelda30tribute.zip",
         "https://github.com/jbosse/zelda30tribute/archive/master.zip",
         "https://github.com/frozwa/zelda30tribute/archive/master.zip",
         "https://github.com/rickpage/zelda30tribute/archive/master.zip",
@@ -46,7 +45,8 @@ mirrors = {
     ],
     # URLs to directory roots
     'plain': [
-        "https://raw.githubusercontent.com/scottlininger/zelda30tribute/",
+        "https://raw.githubusercontent.com/scottlininger/zelda30tribute"
+        "/master/",
     ],
 }
 
