@@ -8,6 +8,7 @@ import errno
 import urllib
 import urllib2
 import argparse
+from zipfile import ZipFile
 
 # URLs of sites from where these assets can be downloaded
 mirrors = [
@@ -704,6 +705,18 @@ assets = {
 
 
 def url_is_accessible(url):
+
+def unzip(zippath, outdir):
+    f = open(zippath, 'rb')
+    z = ZipFile(f)
+    fileno = 0
+    for asset in assets:
+        fileno += 1
+        print("Extracting ({}/{}): {} -> {}"
+              .format(fileno, len(assets), asset, outdir))
+        z.extract(asset, outdir)
+
+
     try:
         urllib.urlopen(url)
         return True
@@ -769,7 +782,8 @@ if __name__ == '__main__':
                             'unpack',  # Move asset dir -> root dir
                             'pack',  # Move root dir -> asset dir
                             'check',  # Check integrity/existence of assets
-                            'download'  # Download assets from external site
+                            'unzip',  # Unzip a zip file to asset dir
+                            'download',  # Download assets from external site
                         ],
                         help="What do you want to do?")
     args = parser.parse_args()
@@ -805,6 +819,13 @@ if __name__ == '__main__':
                 print(msg.format(abspath(asset_dir)))
             if not files_missing_in_root_dir:
                 print(msg.format(abspath(root_dir)))
+    elif args.operation == "unzip":
+        if not files_missing_in_asset_dir:
+            print("The files are already stored in {}" .format(asset_dir))
+        else:
+            zipfilename = "zelda30tribute.zip"
+            print("Unzipping {} -> {}".format(zipfilename, asset_dir))
+            unzip(zipfilename, asset_dir)
     elif args.operation == "download":
         if not files_missing_in_asset_dir:
             print("The files are already downloaded and stored in {}"
