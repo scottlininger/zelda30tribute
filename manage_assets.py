@@ -14,9 +14,37 @@ from zipfile import ZipFile
 mirrors = {
     # URLs to zip files
     'zip': [
+        "https://www.dropbox.com/sh"
+        "/3hcoezbmfbajo06/AAC4LzV7E2BmYm-l9qGi5jo9a?dl=1",
+        "https://github.com/jbosse/zelda30tribute/archive/master.zip",
+        "https://github.com/frozwa/zelda30tribute/archive/master.zip",
+        "https://github.com/rickpage/zelda30tribute/archive/master.zip",
+        "https://github.com/DrivenByHim/zelda30tribute/archive/master.zip",
+        "https://github.com/rcorreia/zelda30tribute/archive/master.zip",
+        "https://github.com/ritterskitter/zelda30tribute/archive/master.zip",
+        "https://github.com/chaddm/zelda30tribute/archive/master.zip",
+        "https://github.com/ebabel-eu/zelda30tribute/archive/master.zip",
+        "https://github.com/unk1nd/zelda30tribute/archive/master.zip",
+        "https://github.com/HPTesla/zelda30tribute/archive/master.zip",
+        "https://github.com/ogregoire/zelda30tribute/archive/master.zip",
+        "https://github.com/borismalezyk/zelda30tribute/archive/master.zip",
+        "https://github.com/patrickgan/zelda30tribute/archive/master.zip",
+        "https://github.com/matsukaz/zelda30tribute/archive/master.zip",
+        "https://github.com/doubleagent/zelda30tribute/archive/master.zip",
+        "https://github.com/malamoney/zelda30tribute/archive/master.zip",
+        "https://github.com/escapedcat/zelda30tribute/archive/master.zip",
+        "https://github.com/kingballer29/zelda30tribute/archive/master.zip",
+        "https://github.com/blockhart615/zelda30tribute/archive/master.zip",
+        "https://github.com/finger563/zelda30tribute/archive/master.zip",
+        "https://github.com/milo-ft/zelda30tribute/archive/master.zip",
+        "https://github.com/philipz/zelda30tribute/archive/master.zip",
+        "https://github.com/TopherLee513/zelda30tribute/archive/master.zip",
+        "https://github.com/sjohnsonaz/zelda30tribute/archive/master.zip",
+        "https://github.com/scottlininger/zelda30tribute/archive/master.zip",
     ],
     # URLs to directory roots
     'plain': [
+        "https://raw.githubusercontent.com/scottlininger/zelda30tribute/",
     ],
 }
 
