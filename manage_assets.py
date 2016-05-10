@@ -792,6 +792,12 @@ def files_missing(rootdir):
 
 
 def print_missing_files(missing):
+    allmissing = all(any(m.endswith(asset) for asset in assets)
+                     for m in missing)
+    if allmissing:
+        parentdir = os.path.dirname(os.path.commonprefix(missing))
+        print("All assets are missing in directory: {}".format(parentdir))
+        return
     fullpaths = {abspath(path) for path in missing}
     print("Files missing:\n{}".format("\n".join(fullpaths)))
 
