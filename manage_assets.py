@@ -11,8 +11,14 @@ import argparse
 from zipfile import ZipFile
 
 # URLs of sites from where these assets can be downloaded
-mirrors = [
-]
+mirrors = {
+    # URLs to zip files
+    'zip': [
+    ],
+    # URLs to directory roots
+    'plain': [
+    ],
+}
 
 # Relative directories for all assets
 assets = {
@@ -704,7 +710,6 @@ assets = {
 }
 
 
-def url_is_accessible(url):
 
 def unzip(zippath, outdir):
     f = open(zippath, 'rb')
@@ -712,11 +717,13 @@ def unzip(zippath, outdir):
     fileno = 0
     for asset in assets:
         fileno += 1
+        outpath = os.path.join(outdir, asset)
         print("Extracting ({}/{}): {} -> {}"
-              .format(fileno, len(assets), asset, outdir))
+              .format(fileno, len(assets), asset, outpath))
         z.extract(asset, outdir)
 
 
+def url_is_retrievable(url):
     try:
         urllib.urlopen(url)
         return True
@@ -726,17 +733,53 @@ def unzip(zippath, outdir):
         return False
 
 
-def download_assets(to_rootdir):
-    for mirror in mirrors:
-        print("Checking to see if mirror site is up...: {}".format(mirror))
-        if not url_is_accessible(mirror):
-            continue
-        print("Site is up. Downloading assets...")
+def download_from_url(mirror, to_rootdir, zipfile=False):
+    print("Checking to see if site is up...")
+    if not url_is_retrievable(mirror):
+        return
+    print("Site is up. Downloading assets...")
+    if zipfile:
+        zipfilename = "zelda30tribute.zip"
+        urllib.urlretrieve(mirror, filename=zipfilename)
+        print("Unzipping {} -> {}".format(zipfilename, to_rootdir))
+        unzip(zipfilename, to_rootdir)
+    else:
+        fileno = 0
         for asset in assets:
+            fileno += 1
             asseturl = os.path.join(mirror, asset)
             dstpath = os.path.join(to_rootdir, asset)
-            print("Downloading asset: {} -> {}".format(asseturl, dstpath))
+            print("Downloading asset ({}/{}): {} -> {}"
+                  .format(fileno, len(assets), asseturl, dstpath))
+            makedirs(dstpath)
             urllib.urlretrieve(asseturl, filename=dstpath)
+
+
+def download_assets(to_rootdir):
+    for mirror in mirrors['zip']:
+        print("Attempting to download zip file from mirror: {}".format(mirror))
+        download_from_url(mirror, to_rootdir, zipfile=True)
+        if not files_missing(to_rootdir):
+            return
+    for mirror in mirrors['plain']:
+        print("Attempting to download from plain mirror: {}".format(mirror))
+        download_from_url(mirror, to_rootdir)
+        if not files_missing(to_rootdir):
+            return
+    raise Exception("Found no available mirrors to download all files from.")
+
+
+def makedirs(path):
+    """ Create the directories that lead to the specified file. """
+    dirpath = os.path.dirname(path)
+    try:
+        os.makedirs(dirpath)
+        print("Created directory: {}".format(dirpath))
+    except OSError as exc:
+        if exc.errno == errno.EEXIST and os.path.isdir(dirpath):
+            pass
+        else:
+            raise
 
 
 def files_missing(rootdir):
@@ -759,14 +802,7 @@ def move_assets(from_rootdir, to_rootdir):
     for asset in assets:
         srcpath = os.path.join(from_rootdir, asset)
         dstpath = os.path.join(to_rootdir, asset)
-        dirpath = os.path.dirname(dstpath)
-        try:
-            os.makedirs(dirpath)
-        except OSError as exc:
-            if exc.errno == errno.EEXIST and os.path.isdir(dirpath):
-                pass
-            else:
-                raise
+        makedirs(dstpath)
         print('Moving asset: {} -> {}...'.format(srcpath, dstpath))
         shutil.move(srcpath, dstpath)
 
@@ -831,7 +867,7 @@ if __name__ == '__main__':
             print("The files are already downloaded and stored in {}"
                   .format(asset_dir))
         else:
-            if mirrors:
+            if mirrors['zip'] or mirrors['plain']:
                 download_assets(asset_dir)
             else:
                 print("There are no sites to download from. Please add an URL "
