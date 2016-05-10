@@ -746,11 +746,13 @@ def joinpaths(*paths):
 
 
 def commondir(paths):
+    """ Returns the parent directory of a set of paths. """
     (folder, sep, tail) = os.path.commonprefix(paths).rpartition('/')
     return folder
 
 
 def parse_hashfile(hashfile):
+    """ Returns a dict mapping each asset to a hash. """
     hashes = dict()
     with open(hashfile, 'r') as f:
         lines = f.readlines()
@@ -763,6 +765,7 @@ def parse_hashfile(hashfile):
 
 
 def check_file_integrity(folder, verbose=False):
+    """ Checks file integrity of downloaded assets by comparing hashes. """
     assetpaths = {joinpaths(folder, p) for p in assets}
     expectedhashes = parse_hashfile('{}.md5'.format(folder))
     for path in assetpaths:
@@ -804,6 +807,7 @@ def unzip(zippath, outdir):
 
 
 def url_is_retrievable(url):
+    """ Return True iff the url is accessible. """
     try:
         urllib2.urlopen(url, timeout=10)
         return True
@@ -814,6 +818,7 @@ def url_is_retrievable(url):
 
 
 def download_reporthook(count, blocksize, filesize):
+    """ A "progress bar" of sorts, for the downloader. """
     filesizestr = ""
     if filesize != -1:
         filesizestr = "/{}".format(filesize/blocksize)
@@ -822,6 +827,7 @@ def download_reporthook(count, blocksize, filesize):
 
 
 def download_from_url(mirror, to_rootdir, zipfile=False):
+    """ Downloads assets from URL mirror into folder to_rootdir. """
     print("Checking to see if site is up...")
     any_asset_url = joinpaths(mirror, next(iter(assets)))
     if zipfile and not url_is_retrievable(mirror):
@@ -848,6 +854,7 @@ def download_from_url(mirror, to_rootdir, zipfile=False):
 
 
 def download_assets(to_rootdir):
+    """ Download assets to to_rootdir by trying a bunch of mirrors. """
     # Shuffle the mirrors for load balancing:
     shuffled_zip_mirrors = mirrors['zip']
     shuffle(shuffled_zip_mirrors)
@@ -865,7 +872,7 @@ def download_assets(to_rootdir):
 
 
 def makedirs(path):
-    """ Create the directories that lead to the specified file. """
+    """ Creates the directories that lead to the specified file. """
     dirpath = os.path.dirname(path)
     try:
         os.makedirs(dirpath)
@@ -878,6 +885,7 @@ def makedirs(path):
 
 
 def files_missing(rootdir):
+    """ Returns the set of assets that are missing from folder rootdir. """
     missing = set()
     for asset in assets:
         path = joinpaths(rootdir, asset)
@@ -887,6 +895,7 @@ def files_missing(rootdir):
 
 
 def print_missing_files(missing):
+    """ Prints the assets that are missing. """
     allmissing = all(any(m.endswith(asset) for asset in assets)
                      for m in missing)
     if allmissing:
@@ -898,6 +907,7 @@ def print_missing_files(missing):
 
 
 def move_assets(from_rootdir, to_rootdir):
+    """ Move an asset from from_rootdir to to_rootdir. """
     print('Moving assets: {} -> {}...'.format(abspath(from_rootdir),
                                               abspath(to_rootdir)))
     for asset in assets:
