@@ -874,7 +874,10 @@ ace.Game.prototype.scrollRoom = function(facing) {
  * @return {boolean} Whether it's down.
  */
 ace.Game.prototype.keyIsDown = function(keyCode) {
-  return this.keyIsDown_[keyCode];
+  var down = typeof this.keyIsDown_ !== 'undefined'
+      && keyCode in this.keyIsDown_
+      && this.keyIsDown_[keyCode];
+  return down;
 };
 
 
@@ -884,7 +887,10 @@ ace.Game.prototype.keyIsDown = function(keyCode) {
  * @return {boolean} Whether it was pressed.
  */
 ace.Game.prototype.keyWasPressed = function(keyCode) {
-  return this.keyWasPressed_[keyCode];
+  var pressed = typeof this.keyWasPressed_ !== 'undefined'
+      && keyCode in this.keyWasPressed_
+      && this.keyWasPressed_[keyCode];
+  return pressed;
 };
 
 
