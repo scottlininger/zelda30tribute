@@ -518,8 +518,8 @@ ace.Avatar.prototype.onTick = function(game) {
 		  this.swordCurseCounter--;
 	  }
 	  
-		if ((game.keyWasPressed(ace.KEY_SPACE) || game.keyWasPressed('x') || game.keyWasPressed('l'))
-		     && this.swordCurseCounter <= 0 && (this.hasInventory('itemwoodensword'))) {
+        var pressedA = ace.controls.A.some(function(k){return game.keyWasPressed(k)});
+		if (pressedA && this.swordCurseCounter <= 0 && (this.hasInventory('itemwoodensword'))) {
 			game.playSound('sword');
 
 			this.showSwordCount = this.showSwordCountReset;

@@ -283,9 +283,10 @@ ace.Game.prototype.simulateKeyboardFromTouches_ = function(targetTouches, isTouc
   this.keyIsDown_[ace.KEY_RIGHT] = false;
   this.keyIsDown_[ace.KEY_UP] = false;
   this.keyIsDown_[ace.KEY_DOWN] = false;
-  this.keyIsDown_[ace.KEY_SPACE] = false; // B button
-  this.keyIsDown_['x'] = false; // B button
-  this.keyIsDown_['z'] = false; // A button
+  for (var i = 0; i < ace.controls.A.length; i++) {
+    this.keyIsDown_[ace.controls.A[i]] = false; // A button
+  }
+  this.keyIsDown_['z'] = false; // B button
   this.keyIsDown_[ace.KEY_ENTER] = false; // start button
   
   for (var i =0; i < targetTouches.length; i++) {
@@ -293,11 +294,13 @@ ace.Game.prototype.simulateKeyboardFromTouches_ = function(targetTouches, isTouc
     var y = targetTouches[i].clientY;
     if (x > this.window.innerWidth - 250) {
       if (this.pointIsOverElement(x, y, $('button-a'))) {
-        this.keyIsDown_['x'] = true;
-        this.keyIsDown_[ace.KEY_SPACE] = true;
+        for (var i = 0; i < ace.controls.A.length; i++) {
+          this.keyIsDown_[ace.controls.A[i]] = true;
+        }
         if (isTouchStart) {
-          this.keyWasPressed_['x'] = true;
-          this.keyWasPressed_[ace.KEY_SPACE] = true; 
+          for (var i = 0; i < ace.controls.A.length; i++) {
+            this.keyWasPressed_[ace.controls.A[i]] = true;
+          }
         }
         
       } else if (this.pointIsOverElement(x, y, $('button-b'))) {
@@ -363,7 +366,9 @@ ace.Game.prototype.updateButtons_ = function() {
     $('button-b').className = '';
   }
   
-  if (this.keyIsDown_[ace.KEY_SPACE] || this.keyIsDown_['x'] || this.keyIsDown_['l']) {
+  var thisGame = this;
+  var downA = ace.controls.A.some(function(k){return thisGame.keyIsDown(k)});
+  if (downA) {
     $('button-a').className = 'pressed';
   } else {
     $('button-a').className = '';
