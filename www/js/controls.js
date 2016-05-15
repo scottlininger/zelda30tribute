@@ -1,5 +1,5 @@
 /**
- * @fileoverview Configuration file for keyboard controls, movement speed, etc..
+ * @fileoverview Configuration file for keyboard controls.
  */
 
 var ace = ace || {};
