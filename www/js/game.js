@@ -835,20 +835,11 @@ ace.Game.prototype.updateCamera = function() {
   
   if (this.perspective == 'tracking') {
     var behindDistance = 200;
-    var xdiff = 0;
-    var ydiff = 0;
-    if(this.avatar.facing == 'down') {
-      ydiff = behindDistance;
-    } else if(this.avatar.facing == 'up') {
-      ydiff = -behindDistance;
-    } else if(this.avatar.facing == 'left') {
-      xdiff = behindDistance;
-    } else if(this.avatar.facing == 'right') {
-      xdiff = -behindDistance;
-    }
+    var xdiff = -ace.xMultByFacing[this.avatar.facing] * behindDistance;
+    var ydiff = -ace.yMultByFacing[this.avatar.facing] * behindDistance;
     var zdiff = 80;
     vec3.set(this.targetEye_, targetX+xdiff, targetY+ydiff, quantizedZ+zdiff);
-  } else {
+  } else if (this.perspective == 'topdown') {
     vec3.set(this.targetEye_, eyeX, eyeY, eyeZ);
   }
   vec3.set(this.targetTarget_, targetX, targetY, quantizedZ);
