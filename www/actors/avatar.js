@@ -485,8 +485,7 @@ ace.Avatar.prototype.onTick = function(game) {
 			this.y += dy;
 		}
 		
-        var pressedB = ace.controls.B.some(function(k){return game.keyWasPressed(k)});
-		if (pressedB) {
+		if (game.buttonWasPressed('B')) {
 		  // We just spawn whatever is equipped and let the actors handle it.
       if (this.currentItem == 'boomerang') {
         if (this.hasInventory('boomerang')  && !this.isThrowingBoomerang()) {
@@ -519,8 +518,8 @@ ace.Avatar.prototype.onTick = function(game) {
 		  this.swordCurseCounter--;
 	  }
 	  
-        var pressedA = ace.controls.A.some(function(k){return game.keyWasPressed(k)});
-		if (pressedA && this.swordCurseCounter <= 0 && (this.hasInventory('itemwoodensword'))) {
+		if (game.buttonWasPressed('A') && this.swordCurseCounter <= 0
+                && (this.hasInventory('itemwoodensword'))) {
 			game.playSound('sword');
 
 			this.showSwordCount = this.showSwordCountReset;

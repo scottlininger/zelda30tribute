@@ -366,16 +366,13 @@ ace.Game.prototype.simulateKeyboardFromTouches_ = function(targetTouches, isTouc
  */
 ace.Game.prototype.updateButtons_ = function() {
 
-  var thisGame = this;
-  var downB = ace.controls.B.some(function(k){return thisGame.keyIsDown(k)});
-  if (downB) {
+  if (this.buttonIsDown('B')) {
     $('button-b').className = 'pressed';
   } else {
     $('button-b').className = '';
   }
   
-  var downA = ace.controls.A.some(function(k){return thisGame.keyIsDown(k)});
-  if (downA) {
+  if (this.buttonIsDown('A')) {
     $('button-a').className = 'pressed';
   } else {
     $('button-a').className = '';
@@ -903,6 +900,28 @@ ace.Game.prototype.keyWasPressed = function(keyCode) {
       && keyCode in this.keyWasPressed_
       && this.keyWasPressed_[keyCode];
   return pressed;
+};
+
+
+/**
+ * Returns whether a given controller button is currently down.
+ * @param {string} button The button to check (e.g. 'A').
+ * @return {boolean} Whether it was pressed.
+ */
+ace.Game.prototype.buttonIsDown = function(button) {
+  var thisGame = this;
+  return ace.controls[button].some(function(k){return thisGame.keyIsDown(k)});
+};
+
+
+/**
+ * Returns whether a given controller button was pressed this last frame.
+ * @param {string} button The button to check (e.g. 'A').
+ * @return {boolean} Whether it was pressed.
+ */
+ace.Game.prototype.buttonWasPressed = function(button) {
+  var thisGame = this;
+  return ace.controls[button].some(function(k){return thisGame.keyWasPressed(k)});
 };
 
 
