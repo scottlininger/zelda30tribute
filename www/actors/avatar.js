@@ -434,22 +434,22 @@ ace.Avatar.prototype.onTick = function(game) {
 	
   if (!this.isFrozen) {
 
-		if (game.keyIsDown(ace.KEY_LEFT) || game.keyIsDown('a')) {
+		if (game.buttonIsDown('Left')) {
 			dx -= this.walkSpeed;
 			this.facing = 'left';
 			isWalking = true;
 		}
-		if (game.keyIsDown(ace.KEY_RIGHT) || game.keyIsDown('d')) {
+		if (game.buttonIsDown('Right')) {
 			dx += this.walkSpeed;
 			this.facing = 'right';
 			isWalking = true;
 		}
-		if (game.keyIsDown(ace.KEY_UP) || game.keyIsDown('w')) {
+		if (game.buttonIsDown('Up')) {
 			dy += this.walkSpeed;
 			this.facing = 'up';
 			isWalking = true;
 		}
-		if (game.keyIsDown(ace.KEY_DOWN) || game.keyIsDown('s')) {
+		if (game.buttonIsDown('Down')) {
 			dy -= this.walkSpeed;
 			this.facing = 'down';
 			isWalking = true;
