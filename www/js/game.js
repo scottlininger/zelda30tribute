@@ -839,19 +839,22 @@ ace.Game.prototype.updateCamera = function() {
     var xdiff = -ace.xMultByFacing[this.avatar.facing] * behindDistance;
     var ydiff = -ace.yMultByFacing[this.avatar.facing] * behindDistance;
     var zdiff = 10;
-    vec3.set(this.targetEye_, targetX+xdiff, targetY+ydiff, quantizedZ+zdiff);
-    vec3.set(this.targetTarget_, targetX, targetY, quantizedZ+zdiff);
+    eyeX = targetX+xdiff;
+    eyeY = targetY+ydiff;
+    quantizedZ += zdiff;
+    eyeZ = quantizedZ;
   } else if (this.perspective == 'tracking') {
     var behindDistance = 200;
     var xdiff = -ace.xMultByFacing[this.avatar.facing] * behindDistance;
     var ydiff = -ace.yMultByFacing[this.avatar.facing] * behindDistance;
     var zdiff = 80;
-    vec3.set(this.targetEye_, targetX+xdiff, targetY+ydiff, quantizedZ+zdiff);
-    vec3.set(this.targetTarget_, targetX, targetY, quantizedZ);
+    eyeX = targetX+xdiff;
+    eyeY = targetY+ydiff;
+    eyeZ = quantizedZ+zdiff;
   } else if (this.perspective == 'topdown') {
-    vec3.set(this.targetEye_, eyeX, eyeY, eyeZ);
-    vec3.set(this.targetTarget_, targetX, targetY, quantizedZ);
   }
+  vec3.set(this.targetEye_, eyeX, eyeY, eyeZ);
+  vec3.set(this.targetTarget_, targetX, targetY, quantizedZ);
 
   vec3.subtract(this.cameraEyeDelta_, this.targetEye_, this.cameraEye_);
   vec3.subtract(this.cameraTargetDelta_, this.targetTarget_, this.cameraTarget_);
