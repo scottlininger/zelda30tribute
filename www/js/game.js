@@ -77,6 +77,14 @@ ace.Game = function(divId, opt_settings) {
    */
   this.actors = [this.avatar];
 
+  /**
+   * Camera perspective. Determines the location, direction and behavior in relation to the avatar.
+   * If 'topdown', the camera settles on the classic top-down view.
+   * If 'tracking', the camera settles on a tracked third-person view (placed a fixed distance
+   * behind and slightly above the avatar).
+   */
+  this.perspective = 'topdown';
+
 
   /**
    * Pointers to our "Heads Up Display" canvas, where we'll
@@ -819,7 +827,24 @@ ace.Game.prototype.updateCamera = function() {
     eyeZ += eyeOffset[2];
   }
   
-  vec3.set(this.targetEye_, eyeX, eyeY, eyeZ);
+  if (this.perspective == 'tracking') {
+    var behindDistance = 200;
+    var xdiff = 0;
+    var ydiff = 0;
+    if(this.avatar.facing == 'down') {
+      ydiff = behindDistance;
+    } else if(this.avatar.facing == 'up') {
+      ydiff = -behindDistance;
+    } else if(this.avatar.facing == 'left') {
+      xdiff = behindDistance;
+    } else if(this.avatar.facing == 'right') {
+      xdiff = -behindDistance;
+    }
+    var zdiff = 80;
+    vec3.set(this.targetEye_, targetX+xdiff, targetY+ydiff, quantizedZ+zdiff);
+  } else {
+    vec3.set(this.targetEye_, eyeX, eyeY, eyeZ);
+  }
   vec3.set(this.targetTarget_, targetX, targetY, quantizedZ);
 
   vec3.subtract(this.cameraEyeDelta_, this.targetEye_, this.cameraEye_);
