@@ -823,15 +823,17 @@ ace.Game.prototype.updateCamera = function() {
     this.cameraEyeSpeed = .4;
   }
   
-  var targetOffset = this.currentRoom_.cameraTargetOffset;
-  var eyeOffset = this.currentRoom_.cameraEyeOffset;
-  if (targetOffset) {
-    targetX += targetOffset[0];
-    targetY += targetOffset[1];
-    quantizedZ += targetOffset[2];
-    eyeX += eyeOffset[0];
-    eyeY += eyeOffset[1];
-    eyeZ += eyeOffset[2];
+  if (this.perspective !== 'fps') {
+    var targetOffset = this.currentRoom_.cameraTargetOffset;
+    var eyeOffset = this.currentRoom_.cameraEyeOffset;
+    if (targetOffset) {
+      targetX += targetOffset[0];
+      targetY += targetOffset[1];
+      quantizedZ += targetOffset[2];
+      eyeX += eyeOffset[0];
+      eyeY += eyeOffset[1];
+      eyeZ += eyeOffset[2];
+    }
   }
   
   if (this.perspective == 'fps') {
