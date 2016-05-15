@@ -14,4 +14,7 @@ ace.controls = {
     'Up': ['w', ace.KEY_UP],
     'Down': ['s', ace.KEY_DOWN],
     'ToggleCamera': ['c'],
+    'TurnLeft': ['q'],
+    'TurnRight': ['e'],
+};
 };

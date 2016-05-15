@@ -434,11 +434,18 @@ ace.Avatar.prototype.onTick = function(game) {
 	
   if (!this.isFrozen) {
 
+        if (game.tankControls && game.buttonWasPressed('TurnLeft')) {
+          var port = ace.counterClockwiseByFacing[this.facing];
+          this.facing = port;
+        } else if (game.tankControls && game.buttonWasPressed('TurnRight')) {
+          var starboard = ace.clockwiseByFacing[this.facing];
+          this.facing = starboard;
+        }
 		if (game.buttonIsDown('Left')) {
             if (game.tankControls) {
-			  dx += ace.xMultByFacing[this.facing] * this.walkSpeed;
-			  dy += ace.yMultByFacing[this.facing] * this.walkSpeed;
-			  this.facing = ace.counterClockwiseByFacing[this.facing];
+              var port = ace.counterClockwiseByFacing[this.facing];
+			  dx += ace.xMultByFacing[port] * this.walkSpeed;
+			  dy += ace.yMultByFacing[port] * this.walkSpeed;
             } else {
 			  dx -= this.walkSpeed;
 			  this.facing = 'left';
@@ -447,9 +454,9 @@ ace.Avatar.prototype.onTick = function(game) {
 		}
 		if (game.buttonIsDown('Right')) {
             if (game.tankControls) {
-			  dx += ace.xMultByFacing[this.facing] * this.walkSpeed;
-			  dy += ace.yMultByFacing[this.facing] * this.walkSpeed;
-			  this.facing = ace.clockwiseByFacing[this.facing];
+              var startboard = ace.clockwiseByFacing[this.facing];
+			  dx += ace.xMultByFacing[startboard] * this.walkSpeed;
+			  dy += ace.yMultByFacing[startboard] * this.walkSpeed;
             } else {
 			  dx += this.walkSpeed;
 			  this.facing = 'right';
