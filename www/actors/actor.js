@@ -91,6 +91,12 @@ ace.Actor = function(game, room, settings) {
    * @type {boolean}
    */
   this.isHidden = false;
+
+  /**
+   * If true, this guy is not drawn.
+   * @type {boolean}
+   */
+  this.isInvisible = false;
   
    
   /**
@@ -493,7 +499,7 @@ ace.Actor.prototype.moveOnScreen = function() {
  * @param {Array.<number>} opt_rotX An optional rotX, in radians.
  */
 ace.Actor.prototype.draw = function (opt_name, opt_position, opt_rotZ, opt_rotX, opt_rotX2) {
-  if (!this.isHidden && this.opacity > 0.75) {
+  if (!this.isHidden && !this.isInvisible && this.opacity > 0.75) {
     var name = opt_name || this.name + this.frame;
     var pos = opt_position || [this.x + this.xOffset, this.y + this.yOffset, (this.z || 0) + this.zOffset];
     var rotZ = opt_rotZ || this.rotZ;
