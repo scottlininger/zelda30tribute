@@ -86,10 +86,10 @@ ace.Game = function(divId, opt_settings) {
   this.perspective = 'topdown';
 
   /**
-   * If enabled, Up becomes "forward", Down becomes "backward", and right/left steers the avatar
-   * sideways.
+   * If enabled, Up becomes "forward", Down becomes "backward", and Right/Left is for strafing.
+   * The TurnLeft and TurnRight buttons can be used for turning left/right by 90 degrees.
    */
-  this.tankControls = false;
+  this.lockStrafe = false;
 
 
   /**

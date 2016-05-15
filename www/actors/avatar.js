@@ -434,15 +434,15 @@ ace.Avatar.prototype.onTick = function(game) {
 	
   if (!this.isFrozen) {
 
-        if (game.tankControls && game.buttonWasPressed('TurnLeft')) {
+        if (game.lockStrafe && game.buttonWasPressed('TurnLeft')) {
           var port = ace.counterClockwiseByFacing[this.facing];
           this.facing = port;
-        } else if (game.tankControls && game.buttonWasPressed('TurnRight')) {
+        } else if (game.lockStrafe && game.buttonWasPressed('TurnRight')) {
           var starboard = ace.clockwiseByFacing[this.facing];
           this.facing = starboard;
         }
 		if (game.buttonIsDown('Left')) {
-            if (game.tankControls) {
+            if (game.lockStrafe) {
               var port = ace.counterClockwiseByFacing[this.facing];
 			  dx += ace.xMultByFacing[port] * this.walkSpeed;
 			  dy += ace.yMultByFacing[port] * this.walkSpeed;
@@ -453,7 +453,7 @@ ace.Avatar.prototype.onTick = function(game) {
 			isWalking = true;
 		}
 		if (game.buttonIsDown('Right')) {
-            if (game.tankControls) {
+            if (game.lockStrafe) {
               var startboard = ace.clockwiseByFacing[this.facing];
 			  dx += ace.xMultByFacing[startboard] * this.walkSpeed;
 			  dy += ace.yMultByFacing[startboard] * this.walkSpeed;
@@ -464,7 +464,7 @@ ace.Avatar.prototype.onTick = function(game) {
 			isWalking = true;
 		}
 		if (game.buttonIsDown('Up')) {
-            if (game.tankControls) {
+            if (game.lockStrafe) {
 			  dx += ace.xMultByFacing[this.facing] * this.walkSpeed;
 			  dy += ace.yMultByFacing[this.facing] * this.walkSpeed;
             } else {
@@ -474,7 +474,7 @@ ace.Avatar.prototype.onTick = function(game) {
 			isWalking = true;
 		}
 		if (game.buttonIsDown('Down')) {
-            if (game.tankControls) {
+            if (game.lockStrafe) {
 			  dx -= ace.xMultByFacing[this.facing] * this.walkSpeed;
 			  dy -= ace.yMultByFacing[this.facing] * this.walkSpeed;
             } else {
@@ -615,10 +615,10 @@ ace.Avatar.prototype.onTick = function(game) {
         if (game.buttonWasPressed('ToggleCamera')) {
             if (game.perspective == 'topdown') {
               game.perspective = 'tracking';
-              game.tankControls = true;
+              game.lockStrafe = true;
             } else if (game.perspective == 'tracking') {
               game.perspective = 'topdown';
-              game.tankControls = false;
+              game.lockStrafe = false;
             }
         }
 	
