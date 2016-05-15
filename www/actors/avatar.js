@@ -616,9 +616,15 @@ ace.Avatar.prototype.onTick = function(game) {
             if (game.perspective == 'topdown') {
               game.perspective = 'tracking';
               game.lockStrafe = true;
+              this.isInvisible = false;
             } else if (game.perspective == 'tracking') {
+              game.perspective = 'fps';
+              game.lockStrafe = true;
+              this.isInvisible = true;
+            } else if (game.perspective == 'fps') {
               game.perspective = 'topdown';
               game.lockStrafe = false;
+              this.isInvisible = false;
             }
         }
 	
