@@ -435,23 +435,45 @@ ace.Avatar.prototype.onTick = function(game) {
   if (!this.isFrozen) {
 
 		if (game.buttonIsDown('Left')) {
-			dx -= this.walkSpeed;
-			this.facing = 'left';
+            if (game.tankControls) {
+			  dx += ace.xMultByFacing[this.facing] * this.walkSpeed;
+			  dy += ace.yMultByFacing[this.facing] * this.walkSpeed;
+			  this.facing = ace.counterClockwiseByFacing[this.facing];
+            } else {
+			  dx -= this.walkSpeed;
+			  this.facing = 'left';
+            }
 			isWalking = true;
 		}
 		if (game.buttonIsDown('Right')) {
-			dx += this.walkSpeed;
-			this.facing = 'right';
+            if (game.tankControls) {
+			  dx += ace.xMultByFacing[this.facing] * this.walkSpeed;
+			  dy += ace.yMultByFacing[this.facing] * this.walkSpeed;
+			  this.facing = ace.clockwiseByFacing[this.facing];
+            } else {
+			  dx += this.walkSpeed;
+			  this.facing = 'right';
+            }
 			isWalking = true;
 		}
 		if (game.buttonIsDown('Up')) {
-			dy += this.walkSpeed;
-			this.facing = 'up';
+            if (game.tankControls) {
+			  dx += ace.xMultByFacing[this.facing] * this.walkSpeed;
+			  dy += ace.yMultByFacing[this.facing] * this.walkSpeed;
+            } else {
+			  dy += this.walkSpeed;
+              this.facing = 'up';
+            }
 			isWalking = true;
 		}
 		if (game.buttonIsDown('Down')) {
-			dy -= this.walkSpeed;
-			this.facing = 'down';
+            if (game.tankControls) {
+			  dx -= ace.xMultByFacing[this.facing] * this.walkSpeed;
+			  dy -= ace.yMultByFacing[this.facing] * this.walkSpeed;
+            } else {
+			  dy -= this.walkSpeed;
+			  this.facing = 'down';
+            }
 			isWalking = true;
 		}
 	
@@ -586,8 +608,10 @@ ace.Avatar.prototype.onTick = function(game) {
         if (game.buttonWasPressed('ToggleCamera')) {
             if (game.perspective == 'topdown') {
               game.perspective = 'tracking';
+              game.tankControls = true;
             } else if (game.perspective == 'tracking') {
               game.perspective = 'topdown';
+              game.tankControls = false;
             }
         }
 	

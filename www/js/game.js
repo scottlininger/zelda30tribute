@@ -85,6 +85,12 @@ ace.Game = function(divId, opt_settings) {
    */
   this.perspective = 'topdown';
 
+  /**
+   * If enabled, Up becomes "forward", Down becomes "backward", and right/left steers the avatar
+   * sideways.
+   */
+  this.tankControls = false;
+
 
   /**
    * Pointers to our "Heads Up Display" canvas, where we'll
