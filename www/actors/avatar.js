@@ -582,6 +582,14 @@ ace.Avatar.prototype.onTick = function(game) {
 				actor.onTouchAvatar(game);
 			}
 		}
+
+        if (game.buttonWasPressed('ToggleCamera')) {
+            if (game.perspective == 'topdown') {
+              game.perspective = 'tracking';
+            } else if (game.perspective == 'tracking') {
+              game.perspective = 'topdown';
+            }
+        }
 	
 		this.rotZ = ace.getRotZByFacing(this.facing);
   }

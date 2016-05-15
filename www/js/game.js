@@ -78,7 +78,7 @@ ace.Game = function(divId, opt_settings) {
   this.actors = [this.avatar];
 
   /**
-   * Camera perspective. Determines the location, direction and behavior in relation to the avatar.
+   * Camera perspective. Determines its location, direction and behavior in relation to the avatar.
    * If 'topdown', the camera settles on the classic top-down view.
    * If 'tracking', the camera settles on a tracked third-person view (placed a fixed distance
    * behind and slightly above the avatar).
