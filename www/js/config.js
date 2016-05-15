@@ -4,5 +4,6 @@
 
 var ace = ace || {};
 ace.controls = {
-    'A': ['x', 'l', ace.KEY_SPACE]  /* Button A */
+    'A': ['x', 'l', ace.KEY_SPACE],  /* Button A */
+    'B': ['z', 'k'],  /* Button B */
 };

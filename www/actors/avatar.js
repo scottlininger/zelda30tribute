@@ -485,7 +485,8 @@ ace.Avatar.prototype.onTick = function(game) {
 			this.y += dy;
 		}
 		
-		if (game.keyWasPressed('z') || game.keyWasPressed('k')) {
+        var pressedB = ace.controls.B.some(function(k){return game.keyWasPressed(k)});
+		if (pressedB) {
 		  // We just spawn whatever is equipped and let the actors handle it.
       if (this.currentItem == 'boomerang') {
         if (this.hasInventory('boomerang')  && !this.isThrowingBoomerang()) {
