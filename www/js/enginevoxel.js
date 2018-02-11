@@ -1375,6 +1375,7 @@ ace.EngineVoxel.prototype.preparePickBuffer_ = function() {
   }
 };
 
+
 /**
  * Changes the dungeon texture.
  * @param {WebGLRenderingContext} gl An initialized and current WebGL context.
